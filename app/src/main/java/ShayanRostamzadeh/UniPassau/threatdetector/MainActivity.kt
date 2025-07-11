@@ -13,9 +13,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import ShayanRostamzadeh.UniPassau.threatdetector.ui.theme.ThreatDetectorTheme
 import android.R
+import android.annotation.SuppressLint
 import android.app.Activity
+import android.content.Context
+import android.text.Layout
+import android.util.Log
 import android.widget.Toast
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Lock
@@ -39,6 +44,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
@@ -48,6 +54,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.util.fastForEachIndexed
 import androidx.fragment.app.FragmentActivity
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.rememberNavController
 
 data class BottomNavBarItem(
     val title: String,
@@ -75,20 +84,24 @@ class MainActivity : FragmentActivity() {
     }
 }
 
+@SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun Main(){
-    //todo: implement app-bar + Frame layout + bottom nav-bar
+    //todo: implement app-bar + bottom nav-bar
+
+    val navController = rememberNavController()
+
 
     val bottomNavBarItems = listOf<BottomNavBarItem>(
         BottomNavBarItem(
-            title = "MONITOR",
+            title = "Monitor",
             selectedIcon = Icons.Filled.Lock,
             unSelectedIcon = Icons.Outlined.Lock,
             hasNews = false
         ),
         BottomNavBarItem(
-            title = "LOGS",
+            title = "Logs",
             selectedIcon = Icons.Filled.Menu,
             unSelectedIcon = Icons.Outlined.Menu,
             hasNews = false
@@ -122,7 +135,7 @@ fun Main(){
                         selected = selectedNavBarItemIndex == index,
                         onClick = {
                             selectedNavBarItemIndex = index
-//                            navController.navigate(item.title)
+                            navController.navigate(item.title)
                         },
                         icon = {
                             BadgedBox(
@@ -146,17 +159,37 @@ fun Main(){
             }
         },
         content = { innerPadding ->
-            // Provide content composable here, e.g.
 
-            // TODO: add the fragment here
+            NavHost(navController = navController,
+                startDestination = Screen.Monitor.route,
+                builder = {
+                    composable (
+                        route = Screen.Monitor.route
+                    ){
+                        Log.w("MainActivity", "should be in MonitorScreen")
+                        MonitorScreen()
+                    }
+                    composable (
+                        route = Screen.Logs.route
+                    ){
+                        Log.w("MainActivity", "should be in LogsScreen")
+                        LogsScreen()
+                    }
+                })
 
-            Column(modifier = Modifier.padding(innerPadding)) {
-                Text("Hello from ${bottomNavBarItems[selectedNavBarItemIndex].title}")
-            }
-        }
+//            Column(
+//                verticalArrangement = Arrangement.Center,
+//                horizontalAlignment = Alignment.CenterHorizontally,
+//                modifier = Modifier
+//                    .padding(innerPadding)
+//                    .fillMaxSize()
+////                    .background(color = Color.Cyan)
+//            ) {
+////                HomeFragment()
+////                Text("Hello from ${bottomNavBarItems[selectedNavBarItemIndex].title}")
+//            }
+        },
     )
-
-    HomeFragment()
 }
 
 
