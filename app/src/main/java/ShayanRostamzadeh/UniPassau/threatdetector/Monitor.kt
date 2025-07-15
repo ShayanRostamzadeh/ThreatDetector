@@ -9,6 +9,15 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 
+
+/*
+Todo:
+    - add a button for connection and disconnection; change its text correspondingly
+    - change the background colour of the UI indicating the VPN status
+    - FOR-NOW - print the captured packets' infos in logcat
+ */
+
+
 @Composable
 fun MonitorScreen(){
     Box(
