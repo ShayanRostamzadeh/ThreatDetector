@@ -27,6 +27,10 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+        <service
+            android:name=".AppVpnService"
+            android:permission="android.permission.BIND_VPN_SERVICE"
+            android:exported="true" />
     </application>
 
 </manifest>
