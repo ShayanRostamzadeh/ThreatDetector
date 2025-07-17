@@ -1,8 +1,12 @@
 package ShayanRostamzadeh.UniPassau.threatdetector
 
+import android.app.Activity
 import android.content.Context
 import android.content.Intent
 import android.net.VpnService
+import android.util.Log
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -16,6 +20,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -29,19 +34,22 @@ Todo:
     - FOR-NOW - print the captured packets' infos in logcat
  */
 
-val vpnService = AppVpnService()
-
 @Composable
 fun MonitorScreen(context: Context){
-//    Box(
-//        modifier = Modifier.fillMaxSize()
-//            .background(MaterialTheme.colorScheme.primary),
-//        contentAlignment = Alignment.Center,
-//    ){
-//        Text(text = "Monitor screen")
-//    }
-    val vpnConnected by rememberSaveable {
+
+    var vpnConnected by rememberSaveable {
         mutableStateOf(false)
+    }
+
+    val vpnLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        if (result.resultCode == Activity.RESULT_OK) {
+            context.startService(Intent(context, AppVpnService::class.java))
+            vpnConnected = true
+        } else {
+            vpnConnected = false
+        }
     }
 
     Column(
@@ -57,42 +65,37 @@ fun MonitorScreen(context: Context){
         Spacer(modifier = Modifier.height(30.dp))
 
         // Button to take the action of connect/disconnect
-        Button(
-            onClick = {
-                connectDisconnect(vpnConnected, context)
-            }) {
-            Text(
-                text = if(vpnConnected) "Disconnect" else "Connect"
-            )
+        Button(onClick = {
+            if (vpnConnected) {
+                disconnectVPN(context)
+                Log.w("AppVpnService", "In Monitor --- Should be disconnected now")
+                vpnConnected = false
+            } else {
+                val intent = VpnService.prepare(context)
+                if (intent != null) {
+                    vpnLauncher.launch(intent)
+                } else {
+                    // Already has permission
+                    context.startService(Intent(context, AppVpnService::class.java))
+                    vpnConnected = true
+                }
+            }
+        }) {
+            Text(text = if (vpnConnected) "Disconnect" else "Connect")
         }
     }
 }//MonitorScreen
 
 
-fun connectDisconnect(connectionStatus: Boolean, context: Context){
-    when(connectionStatus){
-        true -> {
-            //disconnect the vpn
-            disconnectVPN()
-        }
-        false ->{
-            //connect the vpn
-            connectVPN(context)
-        }
-    }
-}//connectDisconnect
 
+fun disconnectVPN(context: Context) {
+    val intent = Intent(context, AppVpnService::class.java)
+    intent.action = "STOP_VPN"
+    context.startService(intent)
 
-fun connectVPN(context: Context){
-//    val intent = VpnService.prepare(context)
-//    if (intent != null) {
-//        startActivityForResult(intent, 0) // must override onActivityResult
-//    } else {
-//        context.startService(Intent(context, AppVpnService::class.java))
-//    }
-}//connectVPN
+    val stopIntent = Intent(context, AppVpnService::class.java)
+    val status = context.stopService(stopIntent)
 
-
-fun disconnectVPN(){
-
+    Log.w("AppVpnService", "In Monitor --- In disconnect function")
+    Log.w("AppVpnService", "In Monitor --- vpn status is $status")
 }//disconnectVPN
