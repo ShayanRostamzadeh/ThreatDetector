@@ -1,5 +1,7 @@
 package ShayanRostamzadeh.UniPassau.threatdetector
 
+import ShayanRostamzadeh.UniPassau.threatdetector.InfoBase.FAANG_IP_Addrs
+import ShayanRostamzadeh.UniPassau.threatdetector.InfoBase.ipStatusMapCache
 import android.content.Intent
 import android.net.VpnService
 import android.os.ParcelFileDescriptor
@@ -16,8 +18,6 @@ import java.nio.ByteOrder
 class AppVpnService : VpnService() {
     private var vpnInterface: ParcelFileDescriptor? = null
     private var running = false
-//    private var vpnThread: Thread? = null
-
     private val vpnScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -65,8 +65,27 @@ class AppVpnService : VpnService() {
         }
 
         return START_STICKY
-    }
+    }//onStartCommand
 
+    private fun parsePacket(buffer: ByteBuffer) {
+        buffer.order(ByteOrder.BIG_ENDIAN)
+
+        val version = (buffer.get(0).toInt() shr 4) and 0xF
+        if (version == 4 && buffer.limit() >= 20) {
+            val destIp = "${buffer.get(16).toInt() and 0xFF}." +
+                    "${buffer.get(17).toInt() and 0xFF}." +
+                    "${buffer.get(18).toInt() and 0xFF}." +
+                    "${buffer.get(19).toInt() and 0xFF}"
+
+//            val byteArray = ByteArray(buffer.remaining())
+//            buffer.get(byteArray)
+//            Log.d("AppVpnService", byteArray.joinToString(" ") { String.format("%02X", it) })
+            Log.i("AppVpnService", "Intercepted packet to IP: $destIp")
+//            Log.d("AppVpnService", String(byteArray))
+
+            isIpMalicious(destIp)
+        }
+    }//parsePacket
 
     override fun onDestroy() {
         Log.d("AppVpnService", "onDestroy() called")
@@ -91,38 +110,34 @@ class AppVpnService : VpnService() {
     }
 
 
-//    override fun onDestroy() {
-//        Log.d("AppVpnService", "onDestroy() is called")
-//        running = false
-//        if(vpnInterface != null){
-//            try {
-//                vpnInterface?.close()
-//            }
-//            catch (e: Exception){
-//                Log.d("AppVpnService", "Error closing the " +
-//                        "vpn connection: ${e.message}")
-//            }
-//        }
-////        vpnThread?.interrupt()
-////        vpnThread = null
-//        vpnInterface?.close()
-//        vpnInterface = null
-//        stopForeground(true)
-//        stopSelf()
-//        super.onDestroy()
-//    }
+    fun isIpMalicious(IpAddr: String): Boolean{
+        /*
+        todo:
+            - check the cache map - if is a FAANG IP
+            - if empty, send the request to AbuseIPDB
+            - if not empty:
+                - if tagged malicious, return true
+                - else if tagged non-malicious, return false
+         */
+        val isMalicious = false
 
-    private fun parsePacket(buffer: ByteBuffer) {
-        buffer.order(ByteOrder.BIG_ENDIAN)
-
-        val version = (buffer.get(0).toInt() shr 4) and 0xF
-        if (version == 4 && buffer.limit() >= 20) {
-            val destIp = "${buffer.get(16).toInt() and 0xFF}." +
-                    "${buffer.get(17).toInt() and 0xFF}." +
-                    "${buffer.get(18).toInt() and 0xFF}." +
-                    "${buffer.get(19).toInt() and 0xFF}"
-
-            Log.i("AppVpnService", "Intercepted packet to IP: $destIp")
+        //going through the FAANG IP addresses
+        for (ip in FAANG_IP_Addrs){
+            if (IpAddr == ip)
+                return false
         }
+
+        if(ipStatusMapCache.isEmpty()){
+            // add the IP to the list
+
+            // send the IP to be checked to AbuseIPDB
+        }
+        else {
+            for (ip in ipStatusMapCache.keys){
+
+            }
+        }
+
+        return false
     }
 }

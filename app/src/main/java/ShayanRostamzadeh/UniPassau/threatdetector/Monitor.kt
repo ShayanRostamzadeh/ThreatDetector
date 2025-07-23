@@ -14,31 +14,36 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.unit.dp
-import androidx.core.app.ActivityCompat.startActivityForResult
+import androidx.compose.ui.unit.sp
+import java.nio.file.WatchEvent
 
-
-/*
-Todo:
-    - add a button for connection and disconnection; change its text correspondingly
-    - change the background colour of the UI indicating the VPN status
-    - FOR-NOW - print the captured packets' infos in logcat
- */
+//fixme: the change in the active fragment refreshes the UI of the Monitor
+//  however it should not be the case since the VPN remains active
 
 @Composable
 fun MonitorScreen(context: Context){
 
     var vpnConnected by rememberSaveable {
         mutableStateOf(false)
+    }
+
+    LaunchedEffect(Unit) {
+        vpnConnected = isVpnRunning(context)
     }
 
     val vpnLauncher = rememberLauncherForActivityResult(
@@ -52,20 +57,32 @@ fun MonitorScreen(context: Context){
         }
     }
 
+
     Column(
         modifier = Modifier.fillMaxSize()
-            .background(MaterialTheme.colorScheme.inversePrimary),
+            .background(
+                if (vpnConnected) {
+                    colorResource(R.color.light_green)
+                } else {
+                    MaterialTheme.colorScheme.primaryContainer
+                }
+            ),
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         // text to show the status of the VPN connection
         Text(
-            text = if(vpnConnected) "Status: Connected" else "Status: Disconnected"
+            text = if(vpnConnected) "Status: Connected" else "Status: Disconnected",
+            fontSize = 25.sp
         )
-        Spacer(modifier = Modifier.height(30.dp))
+        Spacer(modifier = Modifier.height(40.dp))
 
         // Button to take the action of connect/disconnect
-        Button(onClick = {
+        Button(
+            colors = ButtonDefaults.buttonColors(
+                containerColor = Color.DarkGray
+            ),
+            onClick = {
             if (vpnConnected) {
                 disconnectVPN(context)
                 Log.w("AppVpnService", "In Monitor --- Should be disconnected now")
@@ -86,7 +103,15 @@ fun MonitorScreen(context: Context){
     }
 }//MonitorScreen
 
-
+fun isVpnRunning(context: Context): Boolean {
+    val activityManager = context.getSystemService(Context.ACTIVITY_SERVICE) as android.app.ActivityManager
+    for (service in activityManager.getRunningServices(Int.MAX_VALUE)) {
+        if (service.service.className == AppVpnService::class.java.name) {
+            return true
+        }
+    }
+    return false
+}
 
 fun disconnectVPN(context: Context) {
     val intent = Intent(context, AppVpnService::class.java)

@@ -86,6 +86,7 @@ val APP_NAME = "THREAT DETECTOR"
 //val PERMISSION_REQUEST_CODE = 101
 
 
+
 class MainActivity : FragmentActivity() {
     @RequiresApi(Build.VERSION_CODES.VANILLA_ICE_CREAM)
     override fun onCreate(savedInstanceState: Bundle?) {

@@ -63,7 +63,7 @@ dependencies {
     debugImplementation(libs.androidx.ui.test.manifest)
 
 //    implementation("androidx.compose.material3:material3:1.3.2")
-    implementation("androidx.navigation:navigation-compose:2.9.1")
+    implementation("androidx.navigation:navigation-compose:2.9.2")
 //    implementation("com.google.accompanist:accompanist-permissions:0.37.3")
 //    implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.9.1")
 //    implementation("androidx.compose.material3:material3-window-size-class:1.3.2")
