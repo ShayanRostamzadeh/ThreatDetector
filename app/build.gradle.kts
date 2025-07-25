@@ -62,14 +62,9 @@ dependencies {
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)
 
-//    implementation("androidx.compose.material3:material3:1.3.2")
+    implementation("com.squareup.retrofit2:retrofit:3.0.0")
+    implementation("com.squareup.retrofit2:converter-gson:3.0.0")
     implementation("androidx.navigation:navigation-compose:2.9.2")
-//    implementation("com.google.accompanist:accompanist-permissions:0.37.3")
-//    implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.9.1")
-//    implementation("androidx.compose.material3:material3-window-size-class:1.3.2")
-//    implementation("androidx.compose.material3:material3-adaptive:1.0.0-alpha06")
-//    implementation("androidx.compose.material:material-icons-core:1.7.8")
-//    implementation("androidx.compose.material:material-icons-extended:1.6.1")
 
 
 

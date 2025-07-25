@@ -1,11 +1,11 @@
 package ShayanRostamzadeh.UniPassau.threatdetector
 
-import ShayanRostamzadeh.UniPassau.threatdetector.InfoBase.FAANG_IP_Addrs
-import ShayanRostamzadeh.UniPassau.threatdetector.InfoBase.ipStatusMapCache
 import android.content.Intent
 import android.net.VpnService
+import android.os.Build
 import android.os.ParcelFileDescriptor
 import android.util.Log
+import androidx.annotation.RequiresApi
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -14,12 +14,18 @@ import kotlinx.coroutines.launch
 import java.io.FileInputStream
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
+import java.net.InetAddress
+
+data class CidrBlock(val baseAddress: InetAddress, val prefixLength: Int)
+
+val filoMap = FiloMap<String, Boolean>(100)
 
 class AppVpnService : VpnService() {
     private var vpnInterface: ParcelFileDescriptor? = null
     private var running = false
     private val vpnScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
 
+    @RequiresApi(Build.VERSION_CODES.VANILLA_ICE_CREAM)
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
 
         if (intent?.action == "STOP_VPN") {
@@ -67,6 +73,7 @@ class AppVpnService : VpnService() {
         return START_STICKY
     }//onStartCommand
 
+    @RequiresApi(Build.VERSION_CODES.VANILLA_ICE_CREAM)
     private fun parsePacket(buffer: ByteBuffer) {
         buffer.order(ByteOrder.BIG_ENDIAN)
 
@@ -83,7 +90,9 @@ class AppVpnService : VpnService() {
             Log.i("AppVpnService", "Intercepted packet to IP: $destIp")
 //            Log.d("AppVpnService", String(byteArray))
 
-            isIpMalicious(destIp)
+            val IPSecStatus = isIpMalicious(destIp)
+            Log.i("AppVpnService", "IP status check for maliciousness: $destIp")
+
         }
     }//parsePacket
 
@@ -110,34 +119,99 @@ class AppVpnService : VpnService() {
     }
 
 
+    @RequiresApi(Build.VERSION_CODES.VANILLA_ICE_CREAM)
     fun isIpMalicious(IpAddr: String): Boolean{
-        /*
-        todo:
-            - check the cache map - if is a FAANG IP
-            - if empty, send the request to AbuseIPDB
-            - if not empty:
-                - if tagged malicious, return true
-                - else if tagged non-malicious, return false
-         */
-        val isMalicious = false
 
-        //going through the FAANG IP addresses
-        for (ip in FAANG_IP_Addrs){
-            if (IpAddr == ip)
+
+        // TODO: check whether the following rationale makes sense
+
+
+        //checking whether the IP address is already cached
+        for(ip in filoMap.map){
+            if(ip.key == IpAddr && !ip.value)
                 return false
+            else if (ip.key == IpAddr && ip.value)
+                return true
         }
 
-        if(ipStatusMapCache.isEmpty()){
-            // add the IP to the list
-
-            // send the IP to be checked to AbuseIPDB
+        //checking whether the IP is belongs to FAANG
+        if(isFaangIp(IpAddr)){
+//            Log.i("AppVpnService", "IP: $IpAddr is FAANG")
+            filoMap.put(IpAddr, false)
+            return false
         }
-        else {
-            for (ip in ipStatusMapCache.keys){
 
+        //sending the request to AbuseIPDB for IP check
+        val api = createAbuseClient()
+
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                val response = api.checkIp(IpAddr)
+                if (response.isSuccessful) {
+                    val score = response.body()?.data?.abuseConfidenceScore
+                    if (score != null && score > 50) {
+                        Log.d("AppVpnService", "⚠️ Malicious IP detected: $score/100")
+                        // Adding to the cache
+                        filoMap.put(IpAddr, true)
+
+                        //todo: Alert the user about the malicious IP address
+
+
+                    }
+                    Log.d("AppVpnService", "IP not malicious - score: $score/100")
+                }
+            } catch (e: Exception) {
+                Log.e("AppVpnService", "Failed to check IP: ${e.message}")
             }
         }
 
-        return false
+        return true
+    }//isIpMalicious
+
+
+    fun parseCidr(cidr: String): CidrBlock {
+        val (ip, prefix) = cidr.split("/")
+        return CidrBlock(InetAddress.getByName(ip), prefix.toInt())
     }
+
+    fun isIpInRange(ip: String, cidr: String): Boolean {
+        val ipAddress = InetAddress.getByName(ip).address
+        val cidrBlock = parseCidr(cidr)
+        val network = cidrBlock.baseAddress.address
+
+        val prefix = cidrBlock.prefixLength
+        val mask = -1 shl (32 - prefix)
+        val ipInt = ByteBuffer.wrap(ipAddress).int
+        val netInt = ByteBuffer.wrap(network).int
+
+        return (ipInt and mask) == (netInt and mask)
+    }
+
+    fun isFaangIp(ip: String): Boolean {
+        val faangCidrs = listOf(
+            // Facebook
+            "31.13.24.0/21", "66.220.144.0/20", "69.63.176.0/20", "69.171.224.0/19",
+            "74.119.76.0/22", "103.4.96.0/22", "129.134.0.0/16", "157.240.0.0/16",
+            "173.252.64.0/18", "179.60.192.0/22", "185.60.216.0/22",
+
+            // Apple
+            "17.0.0.0/8",
+
+            // Amazon
+            "3.0.0.0/8", "13.52.0.0/16", "13.224.0.0/14", "18.0.0.0/8",
+            "52.0.0.0/11", "54.0.0.0/10", "205.251.192.0/19",
+
+            // Netflix
+            "52.88.0.0/15", "52.26.0.0/16", "34.210.0.0/15", "35.160.0.0/13",
+
+            // Google
+            "8.8.8.0/24", "8.34.208.0/20", "8.35.192.0/20", "23.236.48.0/20",
+            "34.64.0.0/10", "35.192.0.0/12", "66.102.0.0/20", "72.14.192.0/18",
+            "74.125.0.0/16", "108.177.8.0/21", "172.217.0.0/16", "173.194.0.0/16",
+            "192.178.0.0/15", "199.36.154.0/23", "216.58.192.0/19"
+        )
+
+        return faangCidrs.any { cidr -> isIpInRange(ip, cidr) }
+    }//isFaangIp
+
 }
