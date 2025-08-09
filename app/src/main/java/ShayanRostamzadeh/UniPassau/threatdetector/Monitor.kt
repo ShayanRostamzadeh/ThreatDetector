@@ -1,12 +1,10 @@
 package ShayanRostamzadeh.UniPassau.threatdetector
 
-import android.app.Activity
+import ShayanRostamzadeh.UniPassau.threatdetector.ViewModels.MonitorViewModel
+import android.annotation.SuppressLint
+import android.app.Application
 import android.content.Context
-import android.content.Intent
-import android.net.VpnService
 import android.util.Log
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -17,110 +15,114 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import java.nio.file.WatchEvent
+import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.viewmodel.compose.viewModel
 
-//fixme: the change in the active fragment refreshes the UI of the Monitor
-//  however it should not be the case since the VPN remains active
-
+//@Composable
+//fun MonitorScreen(context: Context, pcapServerPort: Int) {
+//    var serverRunning by rememberSaveable { mutableStateOf(false) }
+//    var pcapReceiver: PcapReceiver? by remember { mutableStateOf(null) }
+//
+////    LaunchedEffect(Unit){
+////        serverRunning = ServerStatusTracker._isListening
+////    }
+//
+//    Column(
+//        modifier = Modifier.fillMaxSize().background(
+//            if (serverRunning) colorResource(R.color.light_green)
+//            else MaterialTheme.colorScheme.primaryContainer
+//        ),
+//        verticalArrangement = Arrangement.Center,
+//        horizontalAlignment = Alignment.CenterHorizontally,
+//    ) {
+//        // Show current status
+//        Text(
+//            text = if (serverRunning) "Status: Listening on port $pcapServerPort"
+//            else "Status: Not listening",
+//            fontSize = 22.sp
+//        )
+//
+//        Spacer(modifier = Modifier.height(40.dp))
+//
+//        // Start / Stop TCP server
+//        Button(
+//            colors = ButtonDefaults.buttonColors(containerColor = Color.DarkGray),
+//            onClick = {
+//                if (serverRunning) {
+//                    // Stop server
+//                    pcapReceiver?.stopServer()
+//                    pcapReceiver = null
+////                    serverRunning = false
+//                    Log.i("PCAP_SERVER", "Stopped TCP server")
+//                } else {
+//                    // Start server
+//                    pcapReceiver = PcapReceiver(context, pcapServerPort).also {
+//                        it.startServer()
+//                    }
+////                    serverRunning = true
+//                    Log.i("PCAP_SERVER", "Started TCP server")
+//                }
+//            }
+//        ) {
+//            Text(text = if (serverRunning) "Stop Server" else "Start Server")
+//        }
+//    }
+//}
+@SuppressLint("StateFlowValueCalledInComposition")
 @Composable
-fun MonitorScreen(context: Context){
+fun MonitorScreen(context: Context, pcapServerPort: Int, monitorViewModel: MonitorViewModel = viewModel()) {
 
-    var vpnConnected by rememberSaveable {
-        mutableStateOf(false)
-    }
-
-    LaunchedEffect(Unit) {
-        vpnConnected = isVpnRunning(context)
-    }
-
-    val vpnLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.StartActivityForResult()
-    ) { result ->
-        if (result.resultCode == Activity.RESULT_OK) {
-            context.startService(Intent(context, AppVpnService::class.java))
-            vpnConnected = true
-        } else {
-            vpnConnected = false
-        }
-    }
+    val isRunning by monitorViewModel.isServerRunning
 
 
     Column(
-        modifier = Modifier.fillMaxSize()
+        modifier = Modifier
+            .fillMaxSize()
             .background(
-                if (vpnConnected) {
-                    colorResource(R.color.light_green)
-                } else {
-                    MaterialTheme.colorScheme.primaryContainer
-                }
+                if (isRunning) colorResource(R.color.light_green)
+                else MaterialTheme.colorScheme.primaryContainer
             ),
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        // text to show the status of the VPN connection
         Text(
-            text = if(vpnConnected) "Status: Connected" else "Status: Disconnected",
-            fontSize = 25.sp
+            text = if (isRunning) "Status: Listening on port $pcapServerPort"
+            else "Status: Not listening",
+            fontSize = 22.sp
         )
+
         Spacer(modifier = Modifier.height(40.dp))
 
-        // Button to take the action of connect/disconnect
         Button(
-            colors = ButtonDefaults.buttonColors(
-                containerColor = Color.DarkGray
-            ),
+            colors = ButtonDefaults.buttonColors(containerColor = Color.DarkGray),
             onClick = {
-            if (vpnConnected) {
-                disconnectVPN(context)
-                Log.w("AppVpnService", "In Monitor --- Should be disconnected now")
-                vpnConnected = false
-            } else {
-                val intent = VpnService.prepare(context)
-                if (intent != null) {
-                    vpnLauncher.launch(intent)
+                if (isRunning) {
+                    monitorViewModel.stopServer()
+//                    pcapReceiver?.stopServer()
+//                    pcapReceiver = null
+                    Log.i("PCAP_SERVER", "Stopped TCP server")
+//                    serverRunning = true
                 } else {
-                    // Already has permission
-                    context.startService(Intent(context, AppVpnService::class.java))
-                    vpnConnected = true
+                    monitorViewModel.startServer()
+//                    pcapReceiver = PcapReceiver(context, pcapServerPort).also {
+//                        it.startServer()
+//                    }
+                    Log.i("PCAP_SERVER", "Started TCP server")
                 }
             }
-        }) {
-            Text(text = if (vpnConnected) "Disconnect" else "Connect")
+        ) {
+            Text(text = if (isRunning) "Stop Server" else "Start Server")
         }
     }
-}//MonitorScreen
-
-fun isVpnRunning(context: Context): Boolean {
-    val activityManager = context.getSystemService(Context.ACTIVITY_SERVICE) as android.app.ActivityManager
-    for (service in activityManager.getRunningServices(Int.MAX_VALUE)) {
-        if (service.service.className == AppVpnService::class.java.name) {
-            return true
-        }
-    }
-    return false
 }
 
-fun disconnectVPN(context: Context) {
-    val intent = Intent(context, AppVpnService::class.java)
-    intent.action = "STOP_VPN"
-    context.startService(intent)
 
-    val stopIntent = Intent(context, AppVpnService::class.java)
-    val status = context.stopService(stopIntent)
 
-    Log.w("AppVpnService", "In Monitor --- In disconnect function")
-    Log.w("AppVpnService", "In Monitor --- vpn status is $status")
-}//disconnectVPN

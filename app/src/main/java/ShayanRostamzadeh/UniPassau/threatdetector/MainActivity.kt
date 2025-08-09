@@ -1,5 +1,6 @@
 package ShayanRostamzadeh.UniPassau.threatdetector
 
+import ShayanRostamzadeh.UniPassau.threatdetector.ViewModels.MonitorViewModel
 import android.Manifest
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -61,8 +62,11 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.unit.dp
 import androidx.fragment.app.FragmentActivity
+import androidx.lifecycle.LifecycleOwner
+import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -70,8 +74,11 @@ import androidx.navigation.compose.rememberNavController
 
 /*
 Todo:
-    - request the permission for internet
-    - request the permission for VpnService - BIND_VPN_SERVICE
+    - save api calls number to preferences
+    - check whether a day has passed --> reset the number of api calls - save it to
+        preferences
+    - save the IP addresses and their status in preferences
+    - retrieve the IP addresses and their status on application launch
  */
 
 
@@ -85,7 +92,7 @@ data class BottomNavBarItem(
 val APP_NAME = "THREAT DETECTOR"
 //val PERMISSION_REQUEST_CODE = 101
 
-
+lateinit var checkAPICalls: CheckAPICalls
 
 class MainActivity : FragmentActivity() {
     @RequiresApi(Build.VERSION_CODES.VANILLA_ICE_CREAM)
@@ -111,6 +118,7 @@ class MainActivity : FragmentActivity() {
 fun Main(){
 
     val context = LocalContext.current
+//    val lifCycleOwner = LocalLifecycleOwner.current
 //    val activity = LocalActivity.current
 
     val navController = rememberNavController()
@@ -133,6 +141,11 @@ fun Main(){
     var selectedNavBarItemIndex by rememberSaveable {
         mutableStateOf(0)
     }
+
+    //Creating a thread to check the AbuseIPDB api calls to notify user
+    //when 1000 free daily calls are exhausted
+    checkAPICalls = CheckAPICalls(context)
+    checkAPICalls.startRepeatingTask()
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
@@ -189,7 +202,9 @@ fun Main(){
                         route = Screen.Monitor.route
                     ){
                         Log.w("MainActivity", "should be in MonitorScreen")
-                        MonitorScreen(context)
+
+                        //todo: later receive the hard coded port below from the user
+                        MonitorScreen(context, 1234)
                     }
                     composable (
                         route = Screen.Logs.route
@@ -204,3 +219,4 @@ fun Main(){
         },
     )
 }
+
