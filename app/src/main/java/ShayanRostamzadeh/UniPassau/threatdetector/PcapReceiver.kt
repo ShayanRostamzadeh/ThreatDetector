@@ -1,7 +1,25 @@
+/*
+here is the class that establishes the TCP server for PCAPdroid
+pcap file reception. this class runs a TCP server on a background thread
+that is separate from the Main thread (UI thread).
+Furthermore, it keeps a live connection to receive the pcap files in
+real time. On reception, it updates the info base for the LogsScreen
+to show the data
+*/
+
+
 package ShayanRostamzadeh.UniPassau.threatdetector
 
+import ShayanRostamzadeh.UniPassau.threatdetector.Objects.RetrievedAppsDataManager
 import android.content.Context
+import android.graphics.drawable.Drawable
+import android.os.Build
 import android.util.Log
+import androidx.annotation.RequiresApi
+import kotlinx.coroutines.DelicateCoroutinesApi
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.launch
 import java.io.*
 import java.net.ServerSocket
 import java.net.Socket
@@ -9,7 +27,7 @@ import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import java.util.concurrent.Executors
 
-class PcapReceiver(private val pcapServerPort: Int) {
+class PcapReceiver(private val context: Context, private val pcapServerPort: Int) {
 
     private val serverPort = pcapServerPort
     private val executor = Executors.newSingleThreadExecutor()
@@ -17,6 +35,10 @@ class PcapReceiver(private val pcapServerPort: Int) {
     var isRunning = false
     private var serverSocket: ServerSocket? = null
 
+    val abuseIPDBCheckIP = AbuseIPDBCheckIP()
+
+    @OptIn(DelicateCoroutinesApi::class)
+    @RequiresApi(Build.VERSION_CODES.VANILLA_ICE_CREAM)
     fun startServer() {
         isRunning = true
 
@@ -28,12 +50,10 @@ class PcapReceiver(private val pcapServerPort: Int) {
                 while (isRunning) {
                     val clientSocket = serverSocket!!.accept()
                     Log.d("PCAP_SERVER", "Client connected: ${clientSocket.inetAddress.hostAddress}")
-                    handleClient(clientSocket)
-//                    if(ServerStatusTracker.isListening.value != true){
-//                        ServerStatusTracker.setListening(true)
-//                        Log.w("PCAP_SERVER", "Server Status Tracker - " +
-//                                "should be true: ${ServerStatusTracker.isListening.value}")
-//                    }
+//                    handleClient(clientSocket)
+                    GlobalScope.launch(Dispatchers.IO){
+                        handleClient(clientSocket)
+                    }
                 }
 
             } catch (e: IOException) {
@@ -41,18 +61,10 @@ class PcapReceiver(private val pcapServerPort: Int) {
                     Log.e("PCAP_SERVER", "Server error: ${e.message}", e)
                 } else {
                     Log.d("PCAP_SERVER", "Server stopped.")
-//                    ServerStatusTracker.setListening(false)
-//                    ServerStatusTracker.setListening(false)
-//                    Log.w("PCAP_SERVER", "Server Status Tracker - " +
-//                            "should be false: ${ServerStatusTracker.isListening.value}")
                 }
             } finally {
                 try {
                     serverSocket?.close()
-//                    ServerStatusTracker.setListening(false)
-//                    ServerStatusTracker.setListening(false)
-//                    Log.w("PCAP_SERVER", "Server Status Tracker - " +
-//                            "should be false: ${ServerStatusTracker.isListening.value}")
                 } catch (e: IOException) {
                     Log.e("PCAP_SERVER", "Error closing server socket: ${e.message}", e)
                 }
@@ -65,15 +77,14 @@ class PcapReceiver(private val pcapServerPort: Int) {
 
         try {
             serverSocket?.close()
-//            Log.w("PCAP_SERVER", "Server Status Tracker - " +
-//                    "should be false: ${ServerStatusTracker.isListening.value}")
         } catch (e: IOException) {
             Log.e("PCAP_SERVER", "Error closing server socket: ${e.message}", e)
         }
         executor.shutdownNow()
     }
 
-    private fun handleClient(socket: Socket) {
+    @RequiresApi(Build.VERSION_CODES.VANILLA_ICE_CREAM)
+    private suspend fun handleClient(socket: Socket) {
         try {
             socket.use { sock ->
                 val inputStream = sock.getInputStream()
@@ -105,7 +116,7 @@ class PcapReceiver(private val pcapServerPort: Int) {
                     // Parse inclLen from packet header (bytes 8-11), little endian
                     val inclLen = ByteBuffer.wrap(packetHeader, 8, 4).order(ByteOrder.LITTLE_ENDIAN).int
 
-                    // Sanity check inclLen (avoid huge or negative sizes)
+                    // Sanity check inclLen
                     if (inclLen <= 0 || inclLen > 65535) {
                         Log.e("PCAP_SERVER", "Invalid packet length: $inclLen")
                         return
@@ -132,44 +143,213 @@ class PcapReceiver(private val pcapServerPort: Int) {
         }
     }
 
-    private fun parseAndLogDestinationIP(packetData: ByteArray) {
-        try {
-            // Assume Ethernet if first byte's first 4 bits != 4 (IPv4)
-            var ipStartIndex = 0
-            if ((packetData[0].toInt() shr 4 and 0xF) != 4) {
-                // Ethernet header length is 14 bytes
-                ipStartIndex = 14
-                if (packetData.size < ipStartIndex + 20) {
-                    // Not enough data for IP header, ignore
-                    return
+    // TODO: include the screenshot of the following dumped packet inside the thesis
+    //  also remove the PcapParser kotlin file - no use anymore, the file is parsed and analyzed here
+    private fun dumpPacket(data: ByteArray) {
+        val sb = StringBuilder()
+        val bytesPerLine = 16
+        for (i in data.indices step bytesPerLine) {
+            // Offset in hex
+            sb.append(String.format("%04X: ", i))
+
+            // Hex bytes
+            for (j in 0 until bytesPerLine) {
+                if (i + j < data.size) {
+                    sb.append(String.format("%02X ", data[i + j]))
+                } else {
+                    sb.append("   ")
                 }
             }
 
-            val ipVersion = (packetData[ipStartIndex].toInt() shr 4) and 0x0F
-            if (ipVersion == 4) {
-                // Destination IP bytes are at offset 16-19 after IP header start
-                if (packetData.size >= ipStartIndex + 20) {
-                    val dstIpBytes = packetData.copyOfRange(ipStartIndex + 16, ipStartIndex + 20)
-                    val dstIp = dstIpBytes.joinToString(".") { (it.toInt() and 0xFF).toString() }
-                    Log.d("PCAP_PARSER", "Found destination IP: $dstIp")
-                    // TODO: Add your AbuseIPDB check or other logic here
+            sb.append("  ")
+
+            // ASCII chars or dot for non-printable
+            for (j in 0 until bytesPerLine) {
+                if (i + j < data.size) {
+                    val b = data[i + j]
+                    val c = if (b in 32..126) b.toInt().toChar() else '.'
+                    sb.append(c)
                 }
             }
+
+            sb.append("\n")
+        }
+        Log.d("PCAP_PARSER", "Full Packet Dump:\n$sb")
+    }
+
+    @RequiresApi(Build.VERSION_CODES.VANILLA_ICE_CREAM)
+    private suspend fun parseAndLogDestinationIP(packetData: ByteArray) {
+
+        var retrievedApplicationName = ""
+        var retrievedAppIcon: Drawable? = null
+        var retrievedIpAddress = ""
+
+        try {
+            // Full packet dump for analysis
+//            dumpPacket(packetData)
+
+            val trailerMagic = 0x01072021
+            val minTrailerLength = 10
+
+            if (packetData.size > minTrailerLength) {
+                val scanLimit = minOf(packetData.size, 40)
+                var trailerStartIndex = -1
+
+                // Find trailer magic from near end of packet
+                for (i in packetData.size - scanLimit until packetData.size - 4) {
+                    val magic =
+                        ((packetData[i].toInt() and 0xFF) shl 24) or
+                                ((packetData[i + 1].toInt() and 0xFF) shl 16) or
+                                ((packetData[i + 2].toInt() and 0xFF) shl 8) or
+                                (packetData[i + 3].toInt() and 0xFF)
+                    if (magic == trailerMagic) {
+                        trailerStartIndex = i
+                        break
+                    }
+                }
+
+                if (trailerStartIndex != -1) {
+                    val buffer = packetData
+
+                    // Read UID (4 bytes after trailer magic)
+                    val uid = ((buffer[trailerStartIndex + 4].toInt() and 0xFF) shl 24) or
+                            ((buffer[trailerStartIndex + 5].toInt() and 0xFF) shl 16) or
+                            ((buffer[trailerStartIndex + 6].toInt() and 0xFF) shl 8) or
+                            (buffer[trailerStartIndex + 7].toInt() and 0xFF)
+
+                    // Function to read null-terminated ASCII string starting at offset
+                    fun readNullTerminatedString(start: Int): Pair<String, Int> {
+                        val sb = StringBuilder()
+                        var pos = start
+                        while (pos < buffer.size && buffer[pos] != 0.toByte()) {
+                            sb.append(buffer[pos].toChar())
+                            pos++
+                        }
+                        return Pair(sb.toString(), pos + 1) // +1 to skip null byte
+                    }
+
+                    // Read package name starting right after UID (offset +8)
+                    val (retrievedAppName, afterPackageIndex) = readNullTerminatedString(trailerStartIndex + 8)
+
+                    // Read app name starting right after package name string
+                    val (appName, _) = readNullTerminatedString(afterPackageIndex)
+
+                    Log.d("PCAP_PARSER", "Trailer found at index: $trailerStartIndex")
+                    Log.d("PCAP_PARSER", "Packet size: ${packetData.size}")
+                    Log.d("PCAP_PARSER", "UID: $uid")
+                    Log.d("PCAP_PARSER", "Retrieved App Name: $retrievedAppName")
+
+                    val iconDrawable = getAppIconFromUid(context, uid)
+                    Log.w("PCAP_PARSER", "app icon: $iconDrawable")
+
+                    retrievedAppIcon = iconDrawable
+                    retrievedApplicationName = retrievedAppName
+
+                } else {
+                    Log.d("PCAP_PARSER", "No PCAPdroid trailer magic found in packet")
+                }
+            }
+
+            // --- START IP DESTINATION EXTRACTION ---
+
+            val ethHeaderLen = 14
+            if (packetData.size < ethHeaderLen + 20) {
+                Log.d("PCAP_PARSER", "Packet too short for Ethernet + IP header")
+                return
+            }
+
+            // Ethernet type is bytes 12-13
+            val ethType = ((packetData[12].toInt() and 0xFF) shl 8) or (packetData[13].toInt() and 0xFF)
+
+            when (ethType) {
+                0x0800 -> { // IPv4
+                    val ipHeaderStart = ethHeaderLen
+
+                    if (packetData.size < ipHeaderStart + 20) {
+                        Log.d("PCAP_PARSER", "Packet too short for IPv4 header")
+                        return
+                    }
+
+                    val destIpBytes = packetData.copyOfRange(ipHeaderStart + 16, ipHeaderStart + 20)
+                    val destIp = destIpBytes.joinToString(separator = ".") { (it.toInt() and 0xFF).toString() }
+
+                    Log.d("PCAP_PARSER", "IPv4 Destination IP: $destIp")
+
+                    /*
+                    Populating the RetrievedAppsDataManager object with the
+                    retrieved information from pcap file and the icon which matches
+                    the application UID
+                     */
+                    retrievedIpAddress = destIp
+
+                    RetrievedAppsDataManager.put(retrievedApplicationName,
+                        retrievedIpAddress, retrievedAppIcon)
+
+                    abuseIPDBCheckIP.getIpScore(destIp)
+                }
+
+                0x86DD -> { // IPv6
+                    val ipHeaderStart = ethHeaderLen
+
+                    if (packetData.size < ipHeaderStart + 40) {
+                        Log.d("PCAP_PARSER", "Packet too short for IPv6 header")
+                        return
+                    }
+
+                    val destIpBytes = packetData.copyOfRange(ipHeaderStart + 24, ipHeaderStart + 40)
+                    val destIp = destIpBytes.toIPv6String()
+
+                    Log.d("PCAP_PARSER", "IPv6 Destination IP: $destIp")
+
+                    /*
+                    Populating the RetrievedAppsDataManager object with the
+                    retrieved information from pcap file and the icon which matches
+                    the application UID
+                     */
+                    retrievedIpAddress = destIp
+
+                    RetrievedAppsDataManager.put(retrievedApplicationName,
+                        retrievedIpAddress, retrievedAppIcon)
+
+                    abuseIPDBCheckIP.getIpScore(destIp)
+
+                }
+
+                else -> {
+                    Log.d("PCAP_PARSER", "Unsupported Ethernet type: 0x${ethType.toString(16)}")
+                }
+
+            }
+
+            // --- END IP DESTINATION EXTRACTION ---
+
         } catch (e: Exception) {
             Log.e("PCAP_PARSER", "Error parsing packet data: ${e.message}", e)
         }
     }
 
-
-
-    private fun parsePcapData(pcapData: ByteArray) {
-        val parser = PcapParser()
-        val destIPs = parser.extractDestinationIPs(pcapData)
-
-        for (ip in destIPs) {
-            Log.d("PCAP_PROCESSOR", "Found destination IP: $ip")
-            // TODO: handle these IPs further, e.g., send to AbuseIPDB
+    // Helper extension to convert 16 bytes to IPv6 string
+    private fun ByteArray.toIPv6String(): String {
+        if (this.size != 16) return ""
+        val sb = StringBuilder()
+        for (i in 0 until 16 step 2) {
+            val segment = ((this[i].toInt() and 0xFF) shl 8) or (this[i + 1].toInt() and 0xFF)
+            sb.append(Integer.toHexString(segment))
+            if (i < 14) sb.append(":")
         }
+        return sb.toString()
     }
+
+    fun getAppIconFromUid(context: Context, uid: Int): Drawable? {
+        val pm = context.packageManager
+        val packages = pm.getPackagesForUid(uid)
+        if (!packages.isNullOrEmpty()) {
+            return pm.getApplicationIcon(packages[0])
+        }
+        return null
+    }
+
+
+
 
 }

@@ -1,9 +1,18 @@
+/*
+the main and the only activity in the app which hosts two fragments
+which are composable functions that are navigable using a NavHost provided
+as a bottom bar.
+the app uses Material 3 for the UI and also follows the Scaffold implementation
+which ensures the utilization of various components in their right position in
+the page.
+*/
+
+
 package ShayanRostamzadeh.UniPassau.threatdetector
 
-import ShayanRostamzadeh.UniPassau.threatdetector.ViewModels.MonitorViewModel
-import android.Manifest
+import ShayanRostamzadeh.UniPassau.threatdetector.Objects.GlobalDataStorage.appContext
+import ShayanRostamzadeh.UniPassau.threatdetector.Objects.GlobalDataStorage.tcpServerPort
 import android.os.Bundle
-import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.fillMaxSize
@@ -13,23 +22,9 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import android.annotation.SuppressLint
-import android.app.Activity
-import android.content.Context
-import android.content.Intent
-import android.content.pm.PackageManager
-import android.net.Uri
 import android.os.Build
-import android.provider.Settings
 import android.util.Log
-import android.widget.Toast
-import androidx.activity.compose.LocalActivity
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
-import androidx.activity.result.contract.ActivityResultContracts.StartActivityForResult
 import androidx.annotation.RequiresApi
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
 import androidx.compose.material.icons.Icons
@@ -39,35 +34,22 @@ import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material.icons.outlined.Menu
 import androidx.compose.material3.Badge
 import androidx.compose.material3.BadgedBox
-import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
-import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Surface
 import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
-import androidx.compose.material3.contentColorFor
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.unit.dp
 import androidx.fragment.app.FragmentActivity
-import androidx.lifecycle.LifecycleOwner
-import androidx.lifecycle.ViewModelProvider
-import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
@@ -92,15 +74,22 @@ data class BottomNavBarItem(
 val APP_NAME = "THREAT DETECTOR"
 //val PERMISSION_REQUEST_CODE = 101
 
-lateinit var checkAPICalls: CheckAPICalls
+
 
 class MainActivity : FragmentActivity() {
     @RequiresApi(Build.VERSION_CODES.VANILLA_ICE_CREAM)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-        setContent {
 
+        //assigning the application context to a globally accessible variable
+        //for other parts of the code, since there is only one activity used,
+        //therefore one context exists - appContext is accessible through
+        //GlobalDataStorage
+        appContext = applicationContext
+
+        setContent {
+            //using material surface to build th underlying material UI
             Surface (
                 modifier = Modifier.fillMaxSize(),
                 color = MaterialTheme.colorScheme.background
@@ -116,6 +105,9 @@ class MainActivity : FragmentActivity() {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun Main(){
+
+    //todo: check the variable below iw working as expected
+    lateinit var checkAPICalls: CheckAPICalls
 
     val context = LocalContext.current
 //    val lifCycleOwner = LocalLifecycleOwner.current
@@ -138,13 +130,14 @@ fun Main(){
         )
     )
 
+    //saving the state of which appbar is selected
     var selectedNavBarItemIndex by rememberSaveable {
         mutableStateOf(0)
     }
 
     //Creating a thread to check the AbuseIPDB api calls to notify user
     //when 1000 free daily calls are exhausted
-    checkAPICalls = CheckAPICalls(context)
+    checkAPICalls = CheckAPICalls()
     checkAPICalls.startRepeatingTask()
 
     Scaffold(
@@ -195,6 +188,7 @@ fun Main(){
         },
         content = { innerPadding ->
 
+            //NavHost responsible for enabling the navigation between different fragments
             NavHost(navController = navController,
                 startDestination = Screen.Monitor.route,
                 builder = {
@@ -204,13 +198,14 @@ fun Main(){
                         Log.w("MainActivity", "should be in MonitorScreen")
 
                         //todo: later receive the hard coded port below from the user
-                        MonitorScreen(context, 1234)
+                        MonitorScreen(context, tcpServerPort)
                     }
                     composable (
                         route = Screen.Logs.route
                     ){
                         Log.w("MainActivity", "should be in LogsScreen")
-                        LogsScreen()
+//                        LogsScreen(innerPadding)
+                        LogsScreen(modifier = Modifier.padding(innerPadding))
                     }
                 })
 

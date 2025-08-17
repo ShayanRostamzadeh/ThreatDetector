@@ -1,3 +1,10 @@
+/*
+this file is responsible for the creation of the AbuseIPDB
+client using Retrofit for handling HTTP calls. the information
+is received on a json format that matches the data being kept
+AbuseIpData data class for further use
+*/
+
 package ShayanRostamzadeh.UniPassau.threatdetector
 
 import okhttp3.OkHttpClient

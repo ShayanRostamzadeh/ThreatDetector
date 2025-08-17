@@ -1,12 +1,19 @@
+/*
+this class makes an instance of a filo (first in last out) map.
+since the maps in kotlin store duplicates by default, the class
+takes care of the duplicates prevention.
+the instance of this class is used in RetrievedAppsDataManager object
+to keep track of the app/package name and their IP address in use
+*/
+
 package ShayanRostamzadeh.UniPassau.threatdetector
 
 import android.os.Build
 import androidx.annotation.RequiresApi
-import kotlin.math.max
 
 class FiloMap<K, V>(private val maxSize: Int) {
     val maximumSize = maxSize
-     val map = mutableMapOf<K, V>()
+    val map = mutableMapOf<K, V>()
     private val stack = mutableListOf<K>() // acts like a stack
 
     @RequiresApi(Build.VERSION_CODES.VANILLA_ICE_CREAM)
@@ -23,7 +30,9 @@ class FiloMap<K, V>(private val maxSize: Int) {
         }
     }
 
-    fun get(key: K): V? = map[key]
+    operator fun get(key: K): V? = map[key]
+
+    fun getAllData() = map
 
     fun remove(key: K) {
         stack.remove(key)
