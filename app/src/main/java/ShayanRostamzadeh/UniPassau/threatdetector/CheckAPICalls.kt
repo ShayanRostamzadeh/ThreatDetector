@@ -26,7 +26,7 @@ class CheckAPICalls () {
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
 
 
-    //todo: check the functionality of the code below
+    //todo: use the following code to check for the saved filo map on the phone
     fun startRepeatingTask() {
 
         while (true){

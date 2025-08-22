@@ -61,6 +61,9 @@ Todo:
         preferences
     - save the IP addresses and their status in preferences
     - retrieve the IP addresses and their status on application launch
+    - add the settings page:
+        - for user to set the port number
+        - set the min AbuseIPDB score value to be considered as malicious
  */
 
 

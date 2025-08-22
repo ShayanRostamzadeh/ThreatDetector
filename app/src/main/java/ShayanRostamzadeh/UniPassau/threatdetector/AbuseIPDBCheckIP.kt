@@ -62,8 +62,37 @@ class AbuseIPDBCheckIP {
                 Log.d("PCAP_PARSER", "Checked IP $IpAddr: score=$score")
                 score
             } else {
-                Log.e("PCAP_PARSER", "AbuseIPDB response not successful")
-                0
+                // Handle error response in case the number of free api calls have been exhausted
+                /*
+                https://docs.abuseipdb.com/#clear-address-endpoint
+
+                With the request header "Accept: application/json"
+                {
+                  "errors": [
+                      {
+                          "detail": "Daily rate limit of 1000 requests exceeded for this endpoint. See headers for additional details.",
+                          "status": 429
+                      }
+                  ]
+                }
+                 */
+                if (response.code() == 429) {
+                    val errorBody = response.errorBody()?.string()
+                    Log.e("PCAP_PARSER", "Rate limit exceeded: $errorBody")
+
+                    // fixme: show this as a notification not a toast - make a page to depict user
+                    //  he/she can start using the app from tomorrow
+                    // the following code is functioning without a problem
+                    withContext(Dispatchers.Main) {
+                        Toast.makeText(appContext, "AbuseIPDB daily limit reached. Further checks paused.",
+                            Toast.LENGTH_LONG).show()
+                    }
+
+                    return 0
+                    }
+
+                    Log.e("PCAP_PARSER", "AbuseIPDB response not successful: ${response.code()}")
+                    0
             }
         } catch (e: Exception) {
             Log.e("PCAP_PARSER", "AbuseIPDB error: ${e.message}")
