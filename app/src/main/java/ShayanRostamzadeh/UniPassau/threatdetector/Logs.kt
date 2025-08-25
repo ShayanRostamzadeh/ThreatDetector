@@ -6,13 +6,11 @@ the score received from AbuseIPDB in real time
 
 package ShayanRostamzadeh.UniPassau.threatdetector
 
-import ShayanRostamzadeh.UniPassau.threatdetector.Objects.GlobalDataStorage.appContext
-import ShayanRostamzadeh.UniPassau.threatdetector.Objects.RetrievedAppsDataManager.filoMap
+import ShayanRostamzadeh.UniPassau.threatdetector.Objects.GlobalDataStorage.abuseIpDbMaliciousScore
+import ShayanRostamzadeh.UniPassau.threatdetector.Objects.RetrievedAppsDataManager.fiFoMap
 import ShayanRostamzadeh.UniPassau.threatdetector.Objects.RetrievedAppsDataManager.getAppIPMap
 import ShayanRostamzadeh.UniPassau.threatdetector.Objects.RetrievedAppsDataManager.getAppIconMap
-import android.widget.Space
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -34,11 +32,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.scale
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.modifier.ModifierLocalReadScope
 import androidx.compose.ui.text.font.FontWeight.Companion.Bold
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -64,9 +61,9 @@ fun LogsScreen(modifier: Modifier = Modifier) {
     val appToIcon = getAppIconMap()
 
 
-    val logsListItems = remember(appToIP, appToIcon, filoMap) {
+    val logsListItems = remember(appToIP, appToIcon, fiFoMap) {
         appToIP.mapNotNull { (appName, ip) ->
-            val score = filoMap[ip] ?: 0
+            val score = fiFoMap[ip] ?: 0
             val drawable = appToIcon[appName]
 
             // converting drawables to image bitmaps which is easier for compose to draw
@@ -89,12 +86,22 @@ fun LogsScreen(modifier: Modifier = Modifier) {
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         items(logsListItems) { item ->
+
+            val bgColor = if (item.IPScore > abuseIpDbMaliciousScore) {
+                Color(0xFFFFCDD2) // light red - Material red100
+            } else {
+                MaterialTheme.colorScheme.primaryContainer
+            }
+
             Card(
                 modifier = Modifier, // your modifier here, no need to set background manually
                 shape = RoundedCornerShape(12.dp),  // set corner radius here
+//                colors = CardDefaults.cardColors(
+//                    containerColor = MaterialTheme.colorScheme.primaryContainer
+//                ),
                 colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer
-                ),
+                    containerColor = bgColor
+                )
             ){
                 Row(
                     modifier = Modifier.fillMaxWidth()

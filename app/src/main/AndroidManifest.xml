@@ -4,16 +4,17 @@
 
     <uses-permission android:name="android.permission.INTERNET" /> <!-- <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/> -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
-    <uses-permission android:name="android.permission.QUERY_ALL_PACKAGES"
+    <uses-permission
+        android:name="android.permission.QUERY_ALL_PACKAGES"
         tools:ignore="QueryAllPackagesPermission" />
 
     <queries>
+
         <!-- allow ALL apps UIDs to be accessed from this app -->
         <intent>
             <action android:name="android.intent.action.MAIN" />
         </intent>
     </queries>
-
 
     <application
         android:allowBackup="true"
@@ -25,9 +26,11 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.ThreatDetector"
         tools:targetApi="31">
-<!--        <activity-->
-<!--            android:name=".Pcap_Receiver"-->
-<!--            android:exported="false" />-->
+        <activity android:name=".AbuseApiLimitWarningActivity" />
+
+        <!-- <activity -->
+        <!-- android:name=".Pcap_Receiver" -->
+        <!-- android:exported="false" /> -->
         <activity
             android:name=".MainActivity"
             android:exported="true"
@@ -39,11 +42,6 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-
-<!--        <service-->
-<!--            android:name=".AppVpnService"-->
-<!--            android:exported="true"-->
-<!--            android:permission="android.permission.BIND_VPN_SERVICE" />-->
     </application>
 
 </manifest>

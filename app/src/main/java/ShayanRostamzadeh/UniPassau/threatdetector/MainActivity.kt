@@ -56,14 +56,20 @@ import androidx.navigation.compose.rememberNavController
 
 /*
 Todo:
-    - save api calls number to preferences
-    - check whether a day has passed --> reset the number of api calls - save it to
-        preferences
-    - save the IP addresses and their status in preferences
-    - retrieve the IP addresses and their status on application launch
     - add the settings page:
         - for user to set the port number
         - set the min AbuseIPDB score value to be considered as malicious
+    - redirect the user to a page indicating that the free API calls
+        have been exhausted and to try again tomorrow
+        - deactivate back button functionality
+
+    - should I even do the following?
+        - save the IP addresses and their status in preferences
+        - retrieve the IP addresses and their status on application launch
+    the number of free API calls is large enough to cover same calls in case the
+    app is closed and reopened again. furthermore, what is the criterion to keep
+    an ip address saved in shared-preferences or in a DB and mark it as malicious
+    for an extended amount of time??
  */
 
 
@@ -76,7 +82,6 @@ data class BottomNavBarItem(
 
 val APP_NAME = "THREAT DETECTOR"
 //val PERMISSION_REQUEST_CODE = 101
-
 
 
 class MainActivity : FragmentActivity() {

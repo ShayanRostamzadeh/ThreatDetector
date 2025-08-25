@@ -26,6 +26,7 @@ import java.net.Socket
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import java.util.concurrent.Executors
+import java.net.InetAddress
 
 class PcapReceiver(private val context: Context, private val pcapServerPort: Int) {
 
@@ -145,37 +146,37 @@ class PcapReceiver(private val context: Context, private val pcapServerPort: Int
 
     // TODO: include the screenshot of the following dumped packet inside the thesis
     //  also remove the PcapParser kotlin file - no use anymore, the file is parsed and analyzed here
-    private fun dumpPacket(data: ByteArray) {
-        val sb = StringBuilder()
-        val bytesPerLine = 16
-        for (i in data.indices step bytesPerLine) {
-            // Offset in hex
-            sb.append(String.format("%04X: ", i))
-
-            // Hex bytes
-            for (j in 0 until bytesPerLine) {
-                if (i + j < data.size) {
-                    sb.append(String.format("%02X ", data[i + j]))
-                } else {
-                    sb.append("   ")
-                }
-            }
-
-            sb.append("  ")
-
-            // ASCII chars or dot for non-printable
-            for (j in 0 until bytesPerLine) {
-                if (i + j < data.size) {
-                    val b = data[i + j]
-                    val c = if (b in 32..126) b.toInt().toChar() else '.'
-                    sb.append(c)
-                }
-            }
-
-            sb.append("\n")
-        }
-        Log.d("PCAP_PARSER", "Full Packet Dump:\n$sb")
-    }
+//    private fun dumpPacket(data: ByteArray) {
+//        val sb = StringBuilder()
+//        val bytesPerLine = 16
+//        for (i in data.indices step bytesPerLine) {
+//            // Offset in hex
+//            sb.append(String.format("%04X: ", i))
+//
+//            // Hex bytes
+//            for (j in 0 until bytesPerLine) {
+//                if (i + j < data.size) {
+//                    sb.append(String.format("%02X ", data[i + j]))
+//                } else {
+//                    sb.append("   ")
+//                }
+//            }
+//
+//            sb.append("  ")
+//
+//            // ASCII chars or dot for non-printable
+//            for (j in 0 until bytesPerLine) {
+//                if (i + j < data.size) {
+//                    val b = data[i + j]
+//                    val c = if (b in 32..126) b.toInt().toChar() else '.'
+//                    sb.append(c)
+//                }
+//            }
+//
+//            sb.append("\n")
+//        }
+//        Log.d("PCAP_PARSER", "Full Packet Dump:\n$sb")
+//    }
 
     @RequiresApi(Build.VERSION_CODES.VANILLA_ICE_CREAM)
     private suspend fun parseAndLogDestinationIP(packetData: ByteArray) {
@@ -273,6 +274,8 @@ class PcapReceiver(private val context: Context, private val pcapServerPort: Int
                     val destIpBytes = packetData.copyOfRange(ipHeaderStart + 16, ipHeaderStart + 20)
                     val destIp = destIpBytes.joinToString(separator = ".") { (it.toInt() and 0xFF).toString() }
 
+                    if(isPrivateIpV4(destIp)) return
+
                     Log.d("PCAP_PARSER", "IPv4 Destination IP: $destIp")
 
                     /*
@@ -298,6 +301,8 @@ class PcapReceiver(private val context: Context, private val pcapServerPort: Int
 
                     val destIpBytes = packetData.copyOfRange(ipHeaderStart + 24, ipHeaderStart + 40)
                     val destIp = destIpBytes.toIPv6String()
+
+                    if(isPrivateIpV6(destIp)) return
 
                     Log.d("PCAP_PARSER", "IPv6 Destination IP: $destIp")
 
@@ -349,6 +354,63 @@ class PcapReceiver(private val context: Context, private val pcapServerPort: Int
         return null
     }
 
+
+    //checking whether the IP address is a local address to skip
+    //IPv4
+    fun isPrivateIpV4(ip: String): Boolean {
+        return try {
+            val address = InetAddress.getByName(ip)
+            val bytes = address.address
+
+            when {
+                // 10.0.0.0 – 10.255.255.255
+                (bytes[0].toInt() and 0xFF) == 10 -> true
+
+                // 172.16.0.0 – 172.31.255.255
+                (bytes[0].toInt() and 0xFF) == 172 &&
+                        (bytes[1].toInt() and 0xFF) in 16..31 -> true
+
+                // 192.168.0.0 – 192.168.255.255
+                (bytes[0].toInt() and 0xFF) == 192 &&
+                        (bytes[1].toInt() and 0xFF) == 168 -> true
+
+                // 127.0.0.0 – 127.255.255.255 (loopback)
+                (bytes[0].toInt() and 0xFF) == 127 -> true
+
+                // 169.254.0.0 – 169.254.255.255 (link-local)
+                (bytes[0].toInt() and 0xFF) == 169 &&
+                        (bytes[1].toInt() and 0xFF) == 254 -> true
+
+                else -> false
+            }
+        } catch (e: Exception) {
+            false
+        }
+    }
+
+    //IPv6
+    fun isPrivateIpV6(ip: String): Boolean {
+        return try {
+            val address = InetAddress.getByName(ip)
+            val bytes = address.address
+
+            if (address.isLoopbackAddress || address.isLinkLocalAddress || address.isSiteLocalAddress) {
+                return true
+            }
+
+            // IPv6 ULA (fc00::/7)
+            if (bytes.size == 16) {
+                val firstByte = bytes[0].toInt() and 0xFF
+                if (firstByte and 0xFE == 0xFC) { // fc00::/7
+                    return true
+                }
+            }
+
+            false
+        } catch (e: Exception) {
+            false
+        }
+    }
 
 
 

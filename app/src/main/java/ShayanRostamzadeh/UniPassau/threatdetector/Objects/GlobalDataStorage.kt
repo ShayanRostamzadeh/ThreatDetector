@@ -1,8 +1,6 @@
 package ShayanRostamzadeh.UniPassau.threatdetector.Objects
 
-import ShayanRostamzadeh.UniPassau.threatdetector.FiloMap
 import android.content.Context
-import android.graphics.drawable.Drawable
 
 object GlobalDataStorage {
 
@@ -10,8 +8,6 @@ object GlobalDataStorage {
     //  the app is closed and reopened again - retrieve the date and check whether a day has passed --> reset to 0
 
     //var to keep track of the number of API requests sent till exhaustion
-    //todo: make it a live data and use in main activity to finish the app in case it reached 1000 and
-    // also the clock shows less than 12:00 A.M
     var abuseIpDB_Api_Request_No = 0
 
     // var to keep the app context centralized for use - will be set on app run

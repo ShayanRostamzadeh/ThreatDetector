@@ -8,10 +8,12 @@ colour change to exhibit the TCP server status
 
 package ShayanRostamzadeh.UniPassau.threatdetector
 
+import ShayanRostamzadeh.UniPassau.threatdetector.Objects.GlobalDataStorage.appContext
 import ShayanRostamzadeh.UniPassau.threatdetector.ViewModels.MonitorViewModel
 import android.annotation.SuppressLint
 import android.app.Application
 import android.content.Context
+import android.content.Intent
 import android.util.Log
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -73,6 +75,23 @@ fun MonitorScreen(context: Context, pcapServerPort: Int, monitorViewModel: Monit
             }
         ) {
             Text(text = if (isRunning) "Stop Server" else "Start Server")
+        }
+
+        // TODO: this following button is only for tests - remove in future release
+        Button(
+            colors = ButtonDefaults.buttonColors(containerColor = Color.DarkGray),
+            onClick = {
+                //redirection to API exhaustion page
+                while (true){
+                    if(appContext != null)
+                        break
+                }
+                val intent = Intent(appContext, AbuseApiLimitWarningActivity::class.java)
+                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                appContext!!.startActivity(intent)
+            }
+        ) {
+            Text(text = "redirect")
         }
     }
 }

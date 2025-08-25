@@ -10,7 +10,8 @@ package ShayanRostamzadeh.UniPassau.threatdetector
 import ShayanRostamzadeh.UniPassau.threatdetector.Objects.GlobalDataStorage.abuseIpDB_Api_Request_No
 import ShayanRostamzadeh.UniPassau.threatdetector.Objects.GlobalDataStorage.abuseIpDbMaliciousScore
 import ShayanRostamzadeh.UniPassau.threatdetector.Objects.GlobalDataStorage.appContext
-import ShayanRostamzadeh.UniPassau.threatdetector.Objects.RetrievedAppsDataManager.filoMap
+import ShayanRostamzadeh.UniPassau.threatdetector.Objects.RetrievedAppsDataManager.fiFoMap
+import android.content.Intent
 import android.os.Build
 import android.util.Log
 import android.widget.Toast
@@ -19,6 +20,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.net.InetAddress
 import java.nio.ByteBuffer
+
+data class CidrBlock(val baseAddress: InetAddress, val prefixLength: Int)
 
 class AbuseIPDBCheckIP {
 
@@ -29,7 +32,7 @@ class AbuseIPDBCheckIP {
         Log.w("PCAP_PARSER", "in getIpScore")
 
         // 1. Check the cache
-        filoMap.map[IpAddr]?.let { return it }
+        fiFoMap.map[IpAddr]?.let { return it }
 
         // 2. Skip known FAANG IPs — treat as safe score = 0
         if (isFaangIp(IpAddr)) return 0
@@ -43,7 +46,7 @@ class AbuseIPDBCheckIP {
                 val score = response.body()?.data?.abuseConfidenceScore ?: 0
 
                 // caching the response
-                filoMap.put(IpAddr, score)
+                fiFoMap.put(IpAddr, score)
 
                 if (score > abuseIpDbMaliciousScore) {
                     //waiting till the context for the app has been set in the global object
@@ -86,6 +89,18 @@ class AbuseIPDBCheckIP {
                     withContext(Dispatchers.Main) {
                         Toast.makeText(appContext, "AbuseIPDB daily limit reached. Further checks paused.",
                             Toast.LENGTH_LONG).show()
+                        //stopping TCP server to send API calls to AbuseIPDB
+                        ServerStatusTracker.stopServer()
+
+                        //redirection to API exhaustion page
+                        while (true){
+                            if(appContext != null)
+                                break
+                        }
+                        val intent = Intent(appContext, AbuseApiLimitWarningActivity::class.java)
+                        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                        appContext!!.startActivity(intent)
+
                     }
 
                     return 0

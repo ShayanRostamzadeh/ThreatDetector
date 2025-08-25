@@ -11,7 +11,7 @@ package ShayanRostamzadeh.UniPassau.threatdetector
 import android.os.Build
 import androidx.annotation.RequiresApi
 
-class FiloMap<K, V>(private val maxSize: Int) {
+class FiFoMap<K, V>(private val maxSize: Int) {
     val maximumSize = maxSize
     val map = mutableMapOf<K, V>()
     private val stack = mutableListOf<K>() // acts like a stack
@@ -25,7 +25,7 @@ class FiloMap<K, V>(private val maxSize: Int) {
         map[key] = value
 
         if (map.size > maxSize) {
-            val lastKey = stack.removeLast() // FILO: remove newest
+            val lastKey = stack.removeFirst() // FIFO: remove oldest
             map.remove(lastKey)
         }
     }
