@@ -1,6 +1,9 @@
 package ShayanRostamzadeh.UniPassau.threatdetector.Objects
 
 import android.content.Context
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 
 object GlobalDataStorage {
 
@@ -22,9 +25,9 @@ object GlobalDataStorage {
     val delayToCheckAPICalls = 10_000L
 
     // default tcp server port for PCAPdroid TCP packets to receive
-    var tcpServerPort = 1234
+    var tcpServerPort by mutableStateOf(1234)
 
     // default min value for the score received for an IP address to be
     // considered as malicious and notifies the user
-    var abuseIpDbMaliciousScore = 50
+    var abuseIpDbMaliciousScore by mutableStateOf(50)
 }

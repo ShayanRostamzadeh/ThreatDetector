@@ -28,6 +28,13 @@
         tools:targetApi="31">
         <activity android:name=".AbuseApiLimitWarningActivity" />
 
+
+        <activity
+            android:name=".SettingsActivity"
+            android:exported="true"
+            android:label="Settings Activity"
+            android:theme="@style/Theme.Material3.DayNight.NoActionBar" />
+
         <!-- <activity -->
         <!-- android:name=".Pcap_Receiver" -->
         <!-- android:exported="false" /> -->

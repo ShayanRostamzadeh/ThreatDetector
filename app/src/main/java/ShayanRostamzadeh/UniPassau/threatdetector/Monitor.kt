@@ -8,7 +8,9 @@ colour change to exhibit the TCP server status
 
 package ShayanRostamzadeh.UniPassau.threatdetector
 
+import ShayanRostamzadeh.UniPassau.threatdetector.Objects.GlobalDataStorage.abuseIpDbMaliciousScore
 import ShayanRostamzadeh.UniPassau.threatdetector.Objects.GlobalDataStorage.appContext
+import ShayanRostamzadeh.UniPassau.threatdetector.Objects.GlobalDataStorage.tcpServerPort
 import ShayanRostamzadeh.UniPassau.threatdetector.ViewModels.MonitorViewModel
 import android.annotation.SuppressLint
 import android.app.Application
@@ -38,7 +40,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 
 @SuppressLint("StateFlowValueCalledInComposition")
 @Composable
-fun MonitorScreen(context: Context, pcapServerPort: Int, monitorViewModel: MonitorViewModel = viewModel()) {
+fun MonitorScreen(monitorViewModel: MonitorViewModel = viewModel()) {
 
     //isRunning keeps track of the TCP server status and is
     //the underlying value to set the UI accordingly
@@ -55,8 +57,15 @@ fun MonitorScreen(context: Context, pcapServerPort: Int, monitorViewModel: Monit
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Text(
-            text = if (isRunning) "Status: Listening on port $pcapServerPort"
-            else "Status: Not listening",
+            text = if (isRunning) "Listening on port $tcpServerPort"
+            else "Not listening",
+            fontSize = 22.sp
+        )
+
+        Spacer(modifier = Modifier.height(20.dp))
+
+        Text(
+            text = "Threshold score: $abuseIpDbMaliciousScore",
             fontSize = 22.sp
         )
 

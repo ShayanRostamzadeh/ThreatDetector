@@ -10,6 +10,7 @@ the page.
 
 package ShayanRostamzadeh.UniPassau.threatdetector
 
+import ShayanRostamzadeh.UniPassau.threatdetector.Objects.GlobalDataStorage.abuseIpDbMaliciousScore
 import ShayanRostamzadeh.UniPassau.threatdetector.Objects.GlobalDataStorage.appContext
 import ShayanRostamzadeh.UniPassau.threatdetector.Objects.GlobalDataStorage.tcpServerPort
 import android.os.Bundle
@@ -22,6 +23,8 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import android.annotation.SuppressLint
+import android.content.Context
+import android.content.Intent
 import android.os.Build
 import android.util.Log
 import androidx.annotation.RequiresApi
@@ -30,12 +33,15 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Menu
+import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material.icons.outlined.Menu
 import androidx.compose.material3.Badge
 import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
@@ -59,9 +65,11 @@ Todo:
     - add the settings page:
         - for user to set the port number
         - set the min AbuseIPDB score value to be considered as malicious
-    - redirect the user to a page indicating that the free API calls
-        have been exhausted and to try again tomorrow
-        - deactivate back button functionality
+    - is notification functionality working for IP addresses?
+        - as of now only the user gets notified about the maliciousness
+        by a toast :|
+    - add a check to replace the ip address used by the app only if the score
+        is higher than the score saved previously
 
     - should I even do the following?
         - save the IP addresses and their status in preferences
@@ -109,10 +117,24 @@ class MainActivity : FragmentActivity() {
     }
 }
 
+
 @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun Main(){
+
+    // Access SharedPreferences if the user already changed the desired default values
+    val sharedPref = LocalContext.current
+        .getSharedPreferences("AppSettings", Context.MODE_PRIVATE)
+
+    // Load saved values or use null if not set
+    val savedPort = sharedPref.getInt("tcpServerPort", -1).takeIf { it != -1 }
+    val savedScore = sharedPref.getInt("abuseIpDbMaliciousScore", -1).takeIf { it != -1 }
+
+    if (savedPort != null && savedScore != null){
+        tcpServerPort = savedPort
+        abuseIpDbMaliciousScore = savedScore
+    }
 
     //todo: check the variable below iw working as expected
     lateinit var checkAPICalls: CheckAPICalls
@@ -151,17 +173,36 @@ fun Main(){
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         topBar = {
+//            TopAppBar(
+//                title = {
+//                    Text(APP_NAME)
+//                },
+////                colors = TopAppBarDefaults.topAppBarColors(
+////                    containerColor = MaterialTheme.colorScheme.surface,
+////                    titleContentColor = MaterialTheme.colorScheme.onSurface
+////                ),
+//
+//                modifier = Modifier.shadow(elevation = 4.dp)
+////                modifier = Modifier.background(color = MaterialTheme.colorScheme.surface)
+//            )
+            val context = LocalContext.current
+
             TopAppBar(
                 title = {
                     Text(APP_NAME)
                 },
-//                colors = TopAppBarDefaults.topAppBarColors(
-//                    containerColor = MaterialTheme.colorScheme.surface,
-//                    titleContentColor = MaterialTheme.colorScheme.onSurface
-//                ),
-
+                actions = {
+                    IconButton(onClick = {
+                        val intent = Intent(context, SettingsActivity::class.java)
+                        context.startActivity(intent)
+                    }) {
+                        Icon(
+                            imageVector = Icons.Default.Settings,
+                            contentDescription = "Settings"
+                        )
+                    }
+                },
                 modifier = Modifier.shadow(elevation = 4.dp)
-//                modifier = Modifier.background(color = MaterialTheme.colorScheme.surface)
             )
         },
         bottomBar = {
@@ -206,7 +247,7 @@ fun Main(){
                         Log.w("MainActivity", "should be in MonitorScreen")
 
                         //todo: later receive the hard coded port below from the user
-                        MonitorScreen(context, tcpServerPort)
+                        MonitorScreen()
                     }
                     composable (
                         route = Screen.Logs.route

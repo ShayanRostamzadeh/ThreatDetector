@@ -14,6 +14,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
@@ -33,7 +34,7 @@ class AbuseApiLimitWarningActivity : ComponentActivity() {
 
 @Composable
 fun AbuseApiLimitWarningScreen() {
-    // Infinite color transition between white and light red
+    // Constant color transition between white and light red
     val infiniteTransition = rememberInfiniteTransition(label = "warningAnim")
     val backgroundColor by infiniteTransition.animateColor(
         initialValue = Color.White,
@@ -55,10 +56,11 @@ fun AbuseApiLimitWarningScreen() {
         Text(
             text = "⚠️All of your free AbuseIPDB API " +
                     "\n calls have been exhausted." +
-                    "\n try again tomorrow.⚠️",
+                    "\n Try again tomorrow.⚠️",
             color = Color.DarkGray,
             fontSize = 20.sp,
-            fontWeight = FontWeight.Bold
+            fontWeight = FontWeight.Bold,
+            textAlign = TextAlign.Center
         )
     }
 }
