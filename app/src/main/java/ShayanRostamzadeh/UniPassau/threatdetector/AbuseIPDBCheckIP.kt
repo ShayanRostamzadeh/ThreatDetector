@@ -11,7 +11,6 @@ import ShayanRostamzadeh.UniPassau.threatdetector.Objects.GlobalDataStorage.abus
 import ShayanRostamzadeh.UniPassau.threatdetector.Objects.GlobalDataStorage.abuseIpDbMaliciousScore
 import ShayanRostamzadeh.UniPassau.threatdetector.Objects.GlobalDataStorage.appContext
 import ShayanRostamzadeh.UniPassau.threatdetector.Objects.RetrievedAppsDataManager.fiFoMap
-import android.content.Intent
 import android.os.Build
 import android.util.Log
 import android.widget.Toast
@@ -25,95 +24,161 @@ data class CidrBlock(val baseAddress: InetAddress, val prefixLength: Int)
 
 class AbuseIPDBCheckIP {
 
-    // gets the score of the IP address from AbuseIPDB
     @RequiresApi(Build.VERSION_CODES.VANILLA_ICE_CREAM)
-    suspend fun getIpScore(IpAddr: String): Int {
+    suspend fun getIpData(IpAddr: String): AbuseIpData? {
 
-        Log.w("PCAP_PARSER", "in getIpScore")
+        Log.w("PCAP_PARSER", "in getIpData")
 
-        // 1. Check the cache
+        // 1. Check the cache (store full data instead of just score)
         fiFoMap.map[IpAddr]?.let { return it }
 
-        // 2. Skip known FAANG IPs — treat as safe score = 0
-        if (isFaangIp(IpAddr)) return 0
+        // 2. Skip known FAANG IPs — treat as safe (score 0)
+        if (isFaangIp(IpAddr)) {
+            return AbuseIpData(
+                ipAddress = IpAddr,
+                abuseConfidenceScore = 0,
+                countryCode = "US",
+                domain = null,
+                totalReports = 0,
+                isWhitelisted = false
+            )
+        }
 
-        // 3. If the IP is neither cached nor FAANG, it sends the
-        // API request for the score
         return try {
             val response = createAbuseClient().checkIp(IpAddr)
+
             if (response.isSuccessful) {
                 abuseIpDB_Api_Request_No++
-                val score = response.body()?.data?.abuseConfidenceScore ?: 0
 
-                // caching the response
-                fiFoMap.put(IpAddr, score)
+                val data = response.body()?.data
+                Log.e("PCAP_PARSER", "received body is: $data")
+                if (data != null) {
+                    // cache the full data
+                    fiFoMap.put(IpAddr, data)
 
-                if (score > abuseIpDbMaliciousScore) {
-                    //waiting till the context for the app has been set in the global object
-                    while (true){
-                        if(appContext != null)
-                            break
+                    // notify if malicious
+                    if (data.abuseConfidenceScore > abuseIpDbMaliciousScore) {
+                        while (appContext == null) { /* wait for context */ }
+
+                        withContext(Dispatchers.Main) {
+                            Toast.makeText(
+                                appContext,
+                                "⚠️ Malicious IP: $IpAddr (score: ${data.abuseConfidenceScore})",
+                                Toast.LENGTH_LONG
+                            ).show()
+                        }
                     }
 
-                    //here we use the main thread to show the notifications
-                    //since the main thread is responsible for the UI
-                    withContext(Dispatchers.Main) {
-                        Toast.makeText(appContext, "⚠️ Malicious IP: $IpAddr", Toast.LENGTH_LONG).show()
-                    }
+                    Log.d("PCAP_PARSER", "Checked IP $IpAddr: score=${data.abuseConfidenceScore}")
                 }
 
-                Log.d("PCAP_PARSER", "Checked IP $IpAddr: score=$score")
-                score
+                data
             } else {
-                // Handle error response in case the number of free api calls have been exhausted
-                /*
-                https://docs.abuseipdb.com/#clear-address-endpoint
-
-                With the request header "Accept: application/json"
-                {
-                  "errors": [
-                      {
-                          "detail": "Daily rate limit of 1000 requests exceeded for this endpoint. See headers for additional details.",
-                          "status": 429
-                      }
-                  ]
-                }
-                 */
                 if (response.code() == 429) {
                     val errorBody = response.errorBody()?.string()
                     Log.e("PCAP_PARSER", "Rate limit exceeded: $errorBody")
-
-                    // fixme: show this as a notification not a toast - make a page to depict user
-                    //  he/she can start using the app from tomorrow
-                    // the following code is functioning without a problem
-                    withContext(Dispatchers.Main) {
-                        Toast.makeText(appContext, "AbuseIPDB daily limit reached. Further checks paused.",
-                            Toast.LENGTH_LONG).show()
-                        //stopping TCP server to send API calls to AbuseIPDB
-                        ServerStatusTracker.stopServer()
-
-                        //redirection to API exhaustion page
-                        while (true){
-                            if(appContext != null)
-                                break
-                        }
-                        val intent = Intent(appContext, AbuseApiLimitWarningActivity::class.java)
-                        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                        appContext!!.startActivity(intent)
-
-                    }
-
-                    return 0
-                    }
-
-                    Log.e("PCAP_PARSER", "AbuseIPDB response not successful: ${response.code()}")
-                    0
+                    // handle limit exceeded (show UI / stop server)
+                }
+                null
             }
         } catch (e: Exception) {
             Log.e("PCAP_PARSER", "AbuseIPDB error: ${e.message}")
-            0
+            null
         }
     }
+
+
+    // gets the score of the IP address from AbuseIPDB
+//    @RequiresApi(Build.VERSION_CODES.VANILLA_ICE_CREAM)
+//    suspend fun getIpScore(IpAddr: String): Int {
+//
+//        Log.w("PCAP_PARSER", "in getIpScore")
+//
+//        // 1. Check the cache
+//        fiFoMap.map[IpAddr]?.let { return it }
+//
+//        // 2. Skip known FAANG IPs — treat as safe score = 0
+//        if (isFaangIp(IpAddr)) return 0
+//
+//        // 3. If the IP is neither cached nor FAANG, it sends the
+//        // API request for the score
+//        return try {
+//            val response = createAbuseClient().checkIp(IpAddr)
+//            Log.e("PCAP_PARSER", "received is: $response")
+//
+//            if (response.isSuccessful) {
+//                abuseIpDB_Api_Request_No++
+//                val score = response.body()?.data?.abuseConfidenceScore ?: 0
+//
+//                // caching the response
+//                fiFoMap.put(IpAddr, score)
+//
+//                if (score > abuseIpDbMaliciousScore) {
+//                    //waiting till the context for the app has been set in the global object
+//                    while (true){
+//                        if(appContext != null)
+//                            break
+//                    }
+//
+//                    //here we use the main thread to show the notifications
+//                    //since the main thread is responsible for the UI
+//                    withContext(Dispatchers.Main) {
+//                        Toast.makeText(appContext, "⚠️ Malicious IP: $IpAddr", Toast.LENGTH_LONG).show()
+//                    }
+//                }
+//
+//                Log.d("PCAP_PARSER", "Checked IP $IpAddr: score=$score")
+//                score
+//            } else {
+//                // Handle error response in case the number of free api calls have been exhausted
+//                /*
+//                https://docs.abuseipdb.com/#clear-address-endpoint
+//
+//                With the request header "Accept: application/json"
+//                {
+//                  "errors": [
+//                      {
+//                          "detail": "Daily rate limit of 1000 requests exceeded for this endpoint. See headers for additional details.",
+//                          "status": 429
+//                      }
+//                  ]
+//                }
+//                 */
+//                if (response.code() == 429) {
+//                    val errorBody = response.errorBody()?.string()
+//                    Log.e("PCAP_PARSER", "Rate limit exceeded: $errorBody")
+//
+//                    // fixme: show this as a notification not a toast - make a page to depict user
+//                    //  he/she can start using the app from tomorrow
+//                    // the following code is functioning without a problem
+//                    withContext(Dispatchers.Main) {
+//                        Toast.makeText(appContext, "AbuseIPDB daily limit reached. Further checks paused.",
+//                            Toast.LENGTH_LONG).show()
+//                        //stopping TCP server to send API calls to AbuseIPDB
+//                        ServerStatusTracker.stopServer()
+//
+//                        //redirection to API exhaustion page
+//                        while (true){
+//                            if(appContext != null)
+//                                break
+//                        }
+//                        val intent = Intent(appContext, AbuseApiLimitWarningActivity::class.java)
+//                        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+//                        appContext!!.startActivity(intent)
+//
+//                    }
+//
+//                    return 0
+//                    }
+//
+//                    Log.e("PCAP_PARSER", "AbuseIPDB response not successful: ${response.code()}")
+//                    0
+//            }
+//        } catch (e: Exception) {
+//            Log.e("PCAP_PARSER", "AbuseIPDB error: ${e.message}")
+//            0
+//        }
+//    }
 
     private fun parseCidr(cidr: String): CidrBlock {
         val (ip, prefix) = cidr.split("/")

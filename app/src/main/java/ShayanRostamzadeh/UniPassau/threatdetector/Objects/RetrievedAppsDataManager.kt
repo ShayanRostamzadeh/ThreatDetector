@@ -12,6 +12,7 @@ the functionality of methods defined, are pretty self-explanatory
 
 package ShayanRostamzadeh.UniPassau.threatdetector.Objects
 
+import ShayanRostamzadeh.UniPassau.threatdetector.AbuseIpData
 import ShayanRostamzadeh.UniPassau.threatdetector.FiFoMap
 import android.graphics.drawable.Drawable
 
@@ -20,7 +21,7 @@ object RetrievedAppsDataManager {
     private val appToIP = mutableMapOf<String, String>()
     private val appToIcon = mutableMapOf<String, Drawable?>()
 
-    val fiFoMap = FiFoMap<String, Int>(100)
+    val fiFoMap = FiFoMap<String, AbuseIpData>(100)
 
     fun put(app: String, ip: String, icon: Drawable?) {
         val existingIp = appToIP[app]

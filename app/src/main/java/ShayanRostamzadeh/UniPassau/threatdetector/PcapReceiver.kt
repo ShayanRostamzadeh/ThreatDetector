@@ -125,6 +125,7 @@ class PcapReceiver(private val context: Context, private val pcapServerPort: Int
 
                     // Read the packet data
                     val packetData = ByteArray(inclLen)
+//                    Log.e("PCAP_SERVER", "Entire Packet Data is: $packetData")
                     totalRead = 0
                     while (totalRead < inclLen) {
                         val read = inputStream.read(packetData, totalRead, inclLen - totalRead)
@@ -288,7 +289,16 @@ class PcapReceiver(private val context: Context, private val pcapServerPort: Int
                     RetrievedAppsDataManager.put(retrievedApplicationName,
                         retrievedIpAddress, retrievedAppIcon)
 
-                    abuseIPDBCheckIP.getIpScore(destIp)
+//                    abuseIPDBCheckIP.getIpScore(destIp)
+                    val ipData = abuseIPDBCheckIP.getIpData(destIp)
+                    ipData?.let {
+                        Log.d("PCAP_PARSER", "IP: ${it.ipAddress}")
+                        Log.d("PCAP_PARSER", "Score: ${it.abuseConfidenceScore}")
+                        Log.d("PCAP_PARSER", "Domain: ${it.domain}")
+                        Log.d("PCAP_PARSER", "Total reports: ${it.totalReports}")
+                    }
+                    ipData?.abuseConfidenceScore
+
                 }
 
                 0x86DD -> { // IPv6
@@ -316,8 +326,16 @@ class PcapReceiver(private val context: Context, private val pcapServerPort: Int
                     RetrievedAppsDataManager.put(retrievedApplicationName,
                         retrievedIpAddress, retrievedAppIcon)
 
-                    abuseIPDBCheckIP.getIpScore(destIp)
+//                    abuseIPDBCheckIP.getIpScore(destIp)
 
+                    val ipData = abuseIPDBCheckIP.getIpData(destIp)
+                    ipData?.let {
+                        Log.d("PCAP_PARSER", "IP: ${it.ipAddress}")
+                        Log.d("PCAP_PARSER", "Score: ${it.abuseConfidenceScore}")
+                        Log.d("PCAP_PARSER", "Domain: ${it.domain}")
+                        Log.d("PCAP_PARSER", "Total reports: ${it.totalReports}")
+                    }
+                    ipData?.abuseConfidenceScore
                 }
 
                 else -> {

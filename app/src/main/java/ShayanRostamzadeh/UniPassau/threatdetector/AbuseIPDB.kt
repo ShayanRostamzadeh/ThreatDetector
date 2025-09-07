@@ -36,6 +36,18 @@ data class AbuseIpData(
     val isWhitelisted: Boolean
 )
 
+//data class AbuseIpData(
+//    val ipAddress: String,
+//    val abuseConfidenceScore: Int,
+//    val countryCode: String,
+//    val isp: String?,
+//    val domain: String?,
+//    val usageType: String?,
+//    val totalReports: Int,
+//    val lastReportedAt: String?,
+//    val isWhitelisted: Boolean?
+//)
+
 fun createAbuseClient(): AbuseIpApi {
     val client = OkHttpClient.Builder()
         .addInterceptor { chain ->

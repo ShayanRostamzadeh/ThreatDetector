@@ -45,7 +45,7 @@ import androidx.core.graphics.drawable.toBitmap
 data class LogsListItems(
     val icon: ImageBitmap?,   // Changed to ImageBitmap for easy display
     val IPAddress: String,
-    val IPScore: Int,
+    val IPScore: Int = 0,
     val appName: String
 )
 
@@ -63,7 +63,8 @@ fun LogsScreen(modifier: Modifier = Modifier) {
 
     val logsListItems = remember(appToIP, appToIcon, fiFoMap) {
         appToIP.mapNotNull { (appName, ip) ->
-            val score = fiFoMap[ip] ?: 0
+            val data: AbuseIpData? = fiFoMap[ip]
+            val score = data?.abuseConfidenceScore ?: 0
             val drawable = appToIcon[appName]
 
             // converting drawables to image bitmaps which is easier for compose to draw

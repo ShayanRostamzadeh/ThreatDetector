@@ -12,7 +12,7 @@ import android.os.Build
 import androidx.annotation.RequiresApi
 
 class FiFoMap<K, V>(private val maxSize: Int) {
-    val maximumSize = maxSize
+//    val maximumSize = maxSize
     val map = mutableMapOf<K, V>()
     private val stack = mutableListOf<K>() // acts like a stack
 

@@ -62,9 +62,6 @@ import androidx.navigation.compose.rememberNavController
 
 /*
 Todo:
-    - add the settings page:
-        - for user to set the port number
-        - set the min AbuseIPDB score value to be considered as malicious
     - is notification functionality working for IP addresses?
         - as of now only the user gets notified about the maliciousness
         by a toast :|
