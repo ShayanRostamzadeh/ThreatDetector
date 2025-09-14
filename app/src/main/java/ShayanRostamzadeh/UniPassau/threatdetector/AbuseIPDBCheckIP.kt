@@ -7,6 +7,7 @@ call to receive the associated score
 
 package ShayanRostamzadeh.UniPassau.threatdetector
 
+import ShayanRostamzadeh.UniPassau.threatdetector.Objects.GlobalDataStorage.abuseCategories
 import ShayanRostamzadeh.UniPassau.threatdetector.Objects.GlobalDataStorage.abuseIpDB_Api_Request_No
 import ShayanRostamzadeh.UniPassau.threatdetector.Objects.GlobalDataStorage.abuseIpDbMaliciousScore
 import ShayanRostamzadeh.UniPassau.threatdetector.Objects.GlobalDataStorage.appContext
@@ -15,6 +16,8 @@ import android.os.Build
 import android.util.Log
 import android.widget.Toast
 import androidx.annotation.RequiresApi
+import androidx.compose.foundation.layout.Column
+import androidx.compose.material3.Text
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.net.InetAddress
@@ -40,7 +43,8 @@ class AbuseIPDBCheckIP {
                 countryCode = "US",
                 domain = null,
                 totalReports = 0,
-                isWhitelisted = false
+                isWhitelisted = false,
+                reports = emptyList()
             )
         }
 
@@ -51,7 +55,32 @@ class AbuseIPDBCheckIP {
                 abuseIpDB_Api_Request_No++
 
                 val data = response.body()?.data
-                Log.e("PCAP_PARSER", "received body is: $data")
+
+                val report = data?.reports?.firstOrNull()
+
+
+
+                data?.reports?.take(5)?.forEach { report ->   // show only first 5
+                    val cats = report.categories.joinToString { id ->
+                        abuseCategories[id] ?: "Unknown($id)"
+                    }
+                    Log.w("PCAP_PARSER", """
+                        Reported at: ${report.reportedAt}
+                        Categories: $cats
+                        Comment   : ${report.comment}
+                        Reporter  : ${report.reporterId}
+                    """.trimIndent())
+                }
+
+//                Log.w("PCAP_PARSER", "Report array is: $report")
+//                if (report != null) {
+//
+//                    Log.d("PCAP_PARSER", "Last Reported: ${report.reportedAt}")
+//                    Log.d("PCAP_PARSER", "Comment: ${report.comment ?: "No comment"}")
+//                    Log.d("PCAP_PARSER", report.categories.joinToString())
+//                }
+
+
                 if (data != null) {
                     // cache the full data
                     fiFoMap.put(IpAddr, data)

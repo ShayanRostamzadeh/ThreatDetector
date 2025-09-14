@@ -18,7 +18,8 @@ interface AbuseIpApi {
     @GET("api/v2/check")
     suspend fun checkIp(
         @Query("ipAddress") ip: String,
-        @Query("maxAgeInDays") maxAge: Int = 90
+        @Query("maxAgeInDays") maxAge: Int = 90,
+        @Query("verbose") verbose: Boolean = true
     ): Response<AbuseIpResponse>
 }
 
@@ -33,7 +34,17 @@ data class AbuseIpData(
     val countryCode: String,
     val domain: String?,
     val totalReports: Int,
-    val isWhitelisted: Boolean
+    val isWhitelisted: Boolean,
+
+    val reports: List<Report> = emptyList()
+
+)
+
+data class Report(
+    val reportedAt: String,
+    val comment: String?,
+    val categories: List<Int>,
+    val reporterId: Int
 )
 
 //data class AbuseIpData(

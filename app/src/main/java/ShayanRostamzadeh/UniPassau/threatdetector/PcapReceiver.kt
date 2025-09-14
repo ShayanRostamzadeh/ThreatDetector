@@ -296,6 +296,7 @@ class PcapReceiver(private val context: Context, private val pcapServerPort: Int
                         Log.d("PCAP_PARSER", "Score: ${it.abuseConfidenceScore}")
                         Log.d("PCAP_PARSER", "Domain: ${it.domain}")
                         Log.d("PCAP_PARSER", "Total reports: ${it.totalReports}")
+                        Log.d("PCAP_PARSER", "reports: ${it.reports}")
                     }
                     ipData?.abuseConfidenceScore
 

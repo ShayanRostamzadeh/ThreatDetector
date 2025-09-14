@@ -30,4 +30,34 @@ object GlobalDataStorage {
     // default min value for the score received for an IP address to be
     // considered as malicious and notifies the user
     var abuseIpDbMaliciousScore by mutableStateOf(50)
+
+
+    // codes indicating the reason behind the negative report of an IP address
+    // in AbuseIPDB Check response
+    val abuseCategories = mapOf(
+        1 to "DNS Compromise",
+        2 to "DNS Poisoning",
+        3 to "Fraud Orders",
+        4 to "DDoS Attack",
+        5 to "FTP Brute-Force",
+        6 to "Ping of Death",
+        7 to "Phishing",
+        8 to "Fraud VoIP",
+        9 to "Open Proxy",
+        10 to "Web Spam",
+        11 to "Email Spam",
+        12 to "Blog Spam",
+        13 to "VPN IP",
+        14 to "Port Scan",
+        15 to "Hacking",
+        16 to "SQL Injection",
+        17 to "Spoofing",
+        18 to "Brute-Force Credential Attack",
+        19 to "Bad Web Bot",
+        20 to "Exploited Host",
+        21 to "Web App Attack",
+        22 to "SSH Abuse",
+        23 to "IoT Targeted"
+    )
+
 }
