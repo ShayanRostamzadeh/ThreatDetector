@@ -12,12 +12,12 @@ import ShayanRostamzadeh.UniPassau.threatdetector.Objects.GlobalDataStorage.abus
 import ShayanRostamzadeh.UniPassau.threatdetector.Objects.GlobalDataStorage.abuseIpDbMaliciousScore
 import ShayanRostamzadeh.UniPassau.threatdetector.Objects.GlobalDataStorage.appContext
 import ShayanRostamzadeh.UniPassau.threatdetector.Objects.RetrievedAppsDataManager.fiFoMap
+import ShayanRostamzadeh.UniPassau.threatdetector.Objects.RetrievedAppsDataManager.getAppIPMap
+import ShayanRostamzadeh.UniPassau.threatdetector.Objects.RetrievedAppsDataManager.getAppIconMap
 import android.os.Build
 import android.util.Log
 import android.widget.Toast
 import androidx.annotation.RequiresApi
-import androidx.compose.foundation.layout.Column
-import androidx.compose.material3.Text
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.net.InetAddress
@@ -26,6 +26,13 @@ import java.nio.ByteBuffer
 data class CidrBlock(val baseAddress: InetAddress, val prefixLength: Int)
 
 class AbuseIPDBCheckIP {
+
+    val notificationManager = AppNotificationManager()
+
+    // function to retrieve the key of a map by providing its value
+    fun <K, V> Map<K, V>.getKeyByValue(value: V): K? {
+        return this.entries.firstOrNull { it.value == value }?.key
+    }
 
     @RequiresApi(Build.VERSION_CODES.VANILLA_ICE_CREAM)
     suspend fun getIpData(IpAddr: String): AbuseIpData? {
@@ -84,10 +91,12 @@ class AbuseIPDBCheckIP {
                 if (data != null) {
                     // cache the full data
                     fiFoMap.put(IpAddr, data)
+                    val appIPMap = getAppIPMap()
+                    val appName = appIPMap.getKeyByValue(IpAddr)
 
                     // notify if malicious
                     if (data.abuseConfidenceScore > abuseIpDbMaliciousScore) {
-                        while (appContext == null) { /* wait for context */ }
+                        while (appContext == null) { /* waiting for the app context */ }
 
                         withContext(Dispatchers.Main) {
                             Toast.makeText(
@@ -95,6 +104,11 @@ class AbuseIPDBCheckIP {
                                 "⚠️ Malicious IP: $IpAddr (score: ${data.abuseConfidenceScore})",
                                 Toast.LENGTH_LONG
                             ).show()
+
+                            // using android notifications to inform user of the malicious IP
+                            notificationManager.createNotificationChannel(appContext!!)
+                            notificationManager.showNotification(appContext!!, appName.toString(),
+                                "Malicious IP found: $IpAddr")
                         }
                     }
 
@@ -115,6 +129,7 @@ class AbuseIPDBCheckIP {
             null
         }
     }
+
 
 
     // gets the score of the IP address from AbuseIPDB

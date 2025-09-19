@@ -29,6 +29,7 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -40,7 +41,10 @@ import androidx.compose.ui.text.font.FontWeight.Companion.Bold
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.graphics.drawable.toBitmap
-
+import kotlinx.coroutines.delay
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 
 data class LogsListItems(
     val icon: ImageBitmap?,   // Changed to ImageBitmap for easy display
@@ -51,36 +55,45 @@ data class LogsListItems(
 
 @Composable
 fun LogsScreen(modifier: Modifier = Modifier) {
-//    while (true){
-//        if(appContext != null)
-//            break
-//    }
-//    val context = appContext
+    var logsListItems by remember { mutableStateOf(emptyList<LogsListItems>()) }
 
-    val appToIP = getAppIPMap()
-    val appToIcon = getAppIconMap()
+    // Keep a map of highest scores so far for each of the items shown on the Logs Screen
+    var scoreCache by remember { mutableStateOf(mutableMapOf<String, Int>()) }
 
+    // Auto-refresh every 2 seconds
+    LaunchedEffect(Unit) {
+        while (true) {
+            val appToIP = getAppIPMap()
+            val appToIcon = getAppIconMap()
 
-    val logsListItems = remember(appToIP, appToIcon, fiFoMap) {
-        appToIP.mapNotNull { (appName, ip) ->
-            val data: AbuseIpData? = fiFoMap[ip]
-            val score = data?.abuseConfidenceScore ?: 0
-            val drawable = appToIcon[appName]
+            logsListItems = appToIP.mapNotNull { (appName, ip) ->
+                val data: AbuseIpData? = fiFoMap[ip]
+                val newScore = data?.abuseConfidenceScore ?: 0
 
-            // converting drawables to image bitmaps which is easier for compose to draw
-            val imageBitmap: ImageBitmap? = drawable?.toBitmap()?.asImageBitmap()
+                // Compare with previous score - if the previous score is less, then update the UI
+                // to depict the new score
+                val prevScore = scoreCache[ip] ?: 0
+                val finalScore = if (newScore > prevScore) newScore else prevScore
 
-            LogsListItems(
-                icon = imageBitmap,
-                IPAddress = ip,
-                IPScore = score,
-                appName = appName
-            )
+                // Update cache
+                scoreCache[ip] = finalScore
+
+                val drawable = appToIcon[appName]
+                val imageBitmap: ImageBitmap? = drawable?.toBitmap()?.asImageBitmap()
+
+                LogsListItems(
+                    icon = imageBitmap,
+                    IPAddress = ip,
+                    IPScore = finalScore,
+                    appName = appName
+                )
+            }
+
+            delay(2000) // 2 seconds
         }
     }
 
-    //lazy column used to create an scrollable list of the objects
-    //which are card views (incliding icon, ip address, ip score, app name)
+    //lazy column used to create a scrollable list
     LazyColumn(
         modifier = modifier.fillMaxSize(),
         contentPadding = PaddingValues(16.dp),
@@ -89,39 +102,31 @@ fun LogsScreen(modifier: Modifier = Modifier) {
         items(logsListItems) { item ->
 
             val bgColor = if (item.IPScore > abuseIpDbMaliciousScore) {
-                Color(0xFFFFCDD2) // light red - Material red100
+                Color(0xFFFFCDD2) // light red
             } else {
                 MaterialTheme.colorScheme.primaryContainer
             }
 
             Card(
-                modifier = Modifier, // your modifier here, no need to set background manually
-                shape = RoundedCornerShape(12.dp),  // set corner radius here
-//                colors = CardDefaults.cardColors(
-//                    containerColor = MaterialTheme.colorScheme.primaryContainer
-//                ),
-                colors = CardDefaults.cardColors(
-                    containerColor = bgColor
-                )
-            ){
+                shape = RoundedCornerShape(12.dp),
+                colors = CardDefaults.cardColors(containerColor = bgColor)
+            ) {
                 Row(
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier
+                        .fillMaxWidth()
                         .padding(7.dp),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Box(
-                        modifier = Modifier
-                            .size(50.dp)
+                        modifier = Modifier.size(50.dp)
                     ) {
-                        if (item.icon != null) {
+                        item.icon?.let {
                             Image(
-                                bitmap = item.icon,
+                                bitmap = it,
                                 contentDescription = "${item.appName} icon",
-                                modifier = Modifier
-                                    .fillMaxSize()      // fills the box size (40.dp)
-                                    .align(Alignment.Center),
-                                contentScale = ContentScale.Fit  // or ContentScale.Crop depending on style
+                                modifier = Modifier.fillMaxSize(),
+                                contentScale = ContentScale.Fit
                             )
                         }
                     }
@@ -131,7 +136,9 @@ fun LogsScreen(modifier: Modifier = Modifier) {
                         Spacer(modifier = Modifier.size(10.dp))
                         Text(text = "IP: ${item.IPAddress}")
                     }
+
                     Spacer(modifier = Modifier.size(20.dp))
+
                     Text(
                         modifier = Modifier.padding(15.dp),
                         text = "${item.IPScore}",
