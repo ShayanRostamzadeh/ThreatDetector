@@ -47,6 +47,7 @@ fun SettingsScreen() {
     // Load default values from your GlobalDataStorage object
     var serverPort by remember { mutableStateOf(tcpServerPort.toString()) }
     var minIpScore by remember { mutableStateOf(abuseIpDbMaliciousScore.toString()) }
+    var apiKey by remember { mutableStateOf(ApiKeyManager.getApiKey(context) ?: "") }
 
     Column(
         modifier = Modifier
@@ -73,6 +74,15 @@ fun SettingsScreen() {
 
         Spacer(modifier = Modifier.height(16.dp))
 
+        OutlinedTextField(
+            value = apiKey,
+            onValueChange = { apiKey = it },
+            label = { Text("Your API Key") },
+            modifier = Modifier.fillMaxWidth(),
+        )
+
+        Spacer(modifier = Modifier.height(16.dp))
+
         Button(
             onClick = {
                 val portValue = serverPort.toIntOrNull()
@@ -89,6 +99,8 @@ fun SettingsScreen() {
                         putInt("abuseIpDbMaliciousScore", abuseIpDbMaliciousScore)
                         apply()
                     }
+
+                    ApiKeyManager.saveApiKey(context, apiKey)
 
                     Toast.makeText(context, "Settings Saved", Toast.LENGTH_SHORT).show()
 

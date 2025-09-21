@@ -6,11 +6,14 @@ the score received from AbuseIPDB in real time
 
 package ShayanRostamzadeh.UniPassau.threatdetector
 
+import ShayanRostamzadeh.UniPassau.threatdetector.Objects.GlobalDataStorage.abuseCategories
 import ShayanRostamzadeh.UniPassau.threatdetector.Objects.GlobalDataStorage.abuseIpDbMaliciousScore
 import ShayanRostamzadeh.UniPassau.threatdetector.Objects.RetrievedAppsDataManager.fiFoMap
 import ShayanRostamzadeh.UniPassau.threatdetector.Objects.RetrievedAppsDataManager.getAppIPMap
 import ShayanRostamzadeh.UniPassau.threatdetector.Objects.RetrievedAppsDataManager.getAppIconMap
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -24,6 +27,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
@@ -53,12 +58,18 @@ data class LogsListItems(
     val appName: String
 )
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun LogsScreen(modifier: Modifier = Modifier) {
     var logsListItems by remember { mutableStateOf(emptyList<LogsListItems>()) }
 
     // Keep a map of highest scores so far for each of the items shown on the Logs Screen
     var scoreCache by remember { mutableStateOf(mutableMapOf<String, Int>()) }
+
+    // State for popup dialog
+    var selectedIpData by remember { mutableStateOf<AbuseIpData?>(null) }
+    var showDialog by remember { mutableStateOf(false) }
+
 
     // Auto-refresh every 2 seconds
     LaunchedEffect(Unit) {
@@ -109,7 +120,15 @@ fun LogsScreen(modifier: Modifier = Modifier) {
 
             Card(
                 shape = RoundedCornerShape(12.dp),
-                colors = CardDefaults.cardColors(containerColor = bgColor)
+                colors = CardDefaults.cardColors(containerColor = bgColor),
+                modifier = Modifier.combinedClickable(
+                    onClick = { /* todo: modify if normal click is needed */ },
+                    onLongClick = {
+                        // Show dialog with IP details
+                        selectedIpData = fiFoMap[item.IPAddress]
+                        showDialog = true
+                    }
+                )
             ) {
                 Row(
                     modifier = Modifier
@@ -148,5 +167,39 @@ fun LogsScreen(modifier: Modifier = Modifier) {
                 }
             }
         }
+    }
+    // Popup Dialog for long click
+    if (showDialog && selectedIpData != null) {
+        val ipData = selectedIpData!!
+        val reportItems = ipData.reports.map { report ->
+            val date = report.reportedAt
+            val comment = report.comment ?: "No comment"
+            val categories = report.categories.joinToString { id -> abuseCategories[id] ?: "Unknown($id)" }
+            "Reported at: $date\nCountry: ${ipData.countryCode}\nCategories: $categories\nComment: $comment"
+        }
+
+        AlertDialog(
+            onDismissRequest = { showDialog = false },
+            title = { Text("IP Details: ${ipData.ipAddress}") },
+            text = {
+                LazyColumn {
+                    items(reportItems) { item ->
+                        Text(item)
+                        Text("\n") // spacing between reports
+                    }
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = { showDialog = false },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(
+                        "Close",
+                        modifier = Modifier.align(Alignment.CenterVertically)
+                    )
+                }
+            }
+        )
     }
 }

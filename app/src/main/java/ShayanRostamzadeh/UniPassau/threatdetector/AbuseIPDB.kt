@@ -7,6 +7,10 @@ AbuseIpData data class for further use
 
 package ShayanRostamzadeh.UniPassau.threatdetector
 
+import ShayanRostamzadeh.UniPassau.threatdetector.Objects.GlobalDataStorage.appContext
+import android.widget.Toast
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import retrofit2.Response
 import retrofit2.Retrofit
@@ -23,8 +27,6 @@ interface AbuseIpApi {
     ): Response<AbuseIpResponse>
 }
 
-//change the key after regeneration of the key in the profile
-val apiKey = "7257bd8de3bda5a118b2a388acd86486af24b7e1c175d45c2585d27904c9f2cd4e2543fbdef8ecea"
 
 data class AbuseIpResponse(val data: AbuseIpData)
 
@@ -59,7 +61,19 @@ data class Report(
 //    val isWhitelisted: Boolean?
 //)
 
-fun createAbuseClient(): AbuseIpApi {
+suspend fun createAbuseClient(): AbuseIpApi {
+
+    val apiKey = ApiKeyManager.getApiKey(appContext!!) ?: ""
+
+    withContext(Dispatchers.Main){
+        if(apiKey == ""){
+            Toast.makeText(appContext,"No API Keys found!!" +
+                    "\n Save the API Key and Restart the App."
+                , Toast.LENGTH_LONG).show()
+        }
+    }
+
+
     val client = OkHttpClient.Builder()
         .addInterceptor { chain ->
             val request = chain.request().newBuilder()

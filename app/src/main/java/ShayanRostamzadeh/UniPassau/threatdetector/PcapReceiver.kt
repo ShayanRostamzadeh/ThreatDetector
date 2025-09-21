@@ -10,6 +10,7 @@ to show the data
 
 package ShayanRostamzadeh.UniPassau.threatdetector
 
+import ShayanRostamzadeh.UniPassau.threatdetector.Objects.GlobalDataStorage.abuseCategories
 import ShayanRostamzadeh.UniPassau.threatdetector.Objects.RetrievedAppsDataManager
 import android.content.Context
 import android.graphics.drawable.Drawable
@@ -296,7 +297,21 @@ class PcapReceiver(private val context: Context, private val pcapServerPort: Int
                         Log.d("PCAP_PARSER", "Score: ${it.abuseConfidenceScore}")
                         Log.d("PCAP_PARSER", "Domain: ${it.domain}")
                         Log.d("PCAP_PARSER", "Total reports: ${it.totalReports}")
-                        Log.d("PCAP_PARSER", "reports: ${it.reports}")
+//                        Log.d("PCAP_PARSER", "Reports: ${it.reports}")
+                        Log.d("PCAP_PARSER", "Country Code: ${it.countryCode}")
+                        ipData.reports.forEach { report ->
+                            val date = report.reportedAt
+                            val comment = report.comment ?: "No comment"
+                            val categories = report.categories.joinToString { id ->
+                                abuseCategories[id] ?: "Unknown($id)"
+                            }
+
+                            Log.d("PCAP_PARSER", """
+                                Reported at: $date
+                                Categories : $categories
+                                Comment    : $comment
+                            """.trimIndent())
+                        }
                     }
                     ipData?.abuseConfidenceScore
 
