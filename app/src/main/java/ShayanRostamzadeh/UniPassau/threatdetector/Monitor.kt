@@ -86,22 +86,22 @@ fun MonitorScreen(monitorViewModel: MonitorViewModel = viewModel()) {
             Text(text = if (isRunning) "Stop Server" else "Start Server")
         }
 
-        // TODO: this following button is only for tests - remove in future release
-        Button(
-            colors = ButtonDefaults.buttonColors(containerColor = Color.DarkGray),
-            onClick = {
-                //redirection to API exhaustion page
-                while (true){
-                    if(appContext != null)
-                        break
-                }
-                val intent = Intent(appContext, AbuseApiLimitWarningActivity::class.java)
-                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                appContext!!.startActivity(intent)
-            }
-        ) {
-            Text(text = "redirect")
-        }
+        // this following button is only for tests - remove in future release
+//        Button(
+//            colors = ButtonDefaults.buttonColors(containerColor = Color.DarkGray),
+//            onClick = {
+//                //redirection to API exhaustion page
+//                while (true){
+//                    if(appContext != null)
+//                        break
+//                }
+//                val intent = Intent(appContext, AbuseApiLimitWarningActivity::class.java)
+//                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+//                appContext!!.startActivity(intent)
+//            }
+//        ) {
+//            Text(text = "redirect")
+//        }
     }
 }
 
