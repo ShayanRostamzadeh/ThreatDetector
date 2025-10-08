@@ -43,17 +43,23 @@ class AbuseIPDBCheckIP {
         fiFoMap.map[IpAddr]?.let { return it }
 
         // 2. Skip known FAANG IPs — treat as safe (score 0)
+//        if (isFaangIp(IpAddr)) {
+//            return AbuseIpData(
+//                ipAddress = IpAddr,
+//                abuseConfidenceScore = 0,
+//                countryCode = "US",
+//                domain = null,
+//                totalReports = 0,
+//                isWhitelisted = false,
+//                reports = emptyList()
+//            )
+//        }
         if (isFaangIp(IpAddr)) {
-            return AbuseIpData(
-                ipAddress = IpAddr,
-                abuseConfidenceScore = 0,
-                countryCode = "US",
-                domain = null,
-                totalReports = 0,
-                isWhitelisted = false,
-                reports = emptyList()
-            )
+            Log.i("FAANG_SKIP", "Skipping known FAANG/whitelisted IP: $IpAddr")
+            fiFoMap.remove(IpAddr)
+            return null
         }
+
 
         return try {
             val response = createAbuseClient().checkIp(IpAddr)
@@ -131,10 +137,18 @@ class AbuseIPDBCheckIP {
     }
 
 
+//    private fun parseCidr(cidr: String): CidrBlock {
+//        val (ip, prefix) = cidr.split("/")
+//        return CidrBlock(InetAddress.getByName(ip), prefix.toInt())
+//    }//parseCidr
+
     private fun parseCidr(cidr: String): CidrBlock {
-        val (ip, prefix) = cidr.split("/")
-        return CidrBlock(InetAddress.getByName(ip), prefix.toInt())
-    }//parseCidr
+        val parts = cidr.split("/")
+        val ip = parts[0]
+        val prefix = if (parts.size > 1) parts[1].toInt() else 32  // assume /32 for single IPs
+        return CidrBlock(InetAddress.getByName(ip), prefix)
+    }
+
 
 
     // the following function checks whether the IP is within
@@ -155,7 +169,7 @@ class AbuseIPDBCheckIP {
 
     // the following function checks whether the received IP
     // from PCAPdroid belongs to FAANG domains
-    private fun isFaangIp(ip: String): Boolean {
+    fun isFaangIp(ip: String): Boolean {
         val faangCidrs = listOf(
             // Facebook
             "31.13.24.0/21", "66.220.144.0/20", "69.63.176.0/20", "69.171.224.0/19",
@@ -170,7 +184,7 @@ class AbuseIPDBCheckIP {
             "52.0.0.0/11", "54.0.0.0/10", "205.251.192.0/19",
 
             // AbuseIPDB
-            "104.26.12.38", "172.67.70.74",
+            "104.26.0.0/16", "172.67.0.0/16",
 
             // Netflix
             "52.88.0.0/15", "52.26.0.0/16", "34.210.0.0/15", "35.160.0.0/13",

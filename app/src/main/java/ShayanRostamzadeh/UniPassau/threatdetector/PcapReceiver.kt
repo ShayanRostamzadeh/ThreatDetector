@@ -287,8 +287,10 @@ class PcapReceiver(private val context: Context, private val pcapServerPort: Int
                      */
                     retrievedIpAddress = destIp
 
-                    RetrievedAppsDataManager.put(retrievedApplicationName,
-                        retrievedIpAddress, retrievedAppIcon)
+                    if(!abuseIPDBCheckIP.isFaangIp(destIp)){
+                        RetrievedAppsDataManager.put(retrievedApplicationName,
+                            retrievedIpAddress, retrievedAppIcon)
+                    }
 
 //                    abuseIPDBCheckIP.getIpScore(destIp)
                     val ipData = abuseIPDBCheckIP.getIpData(destIp)
@@ -339,8 +341,10 @@ class PcapReceiver(private val context: Context, private val pcapServerPort: Int
                      */
                     retrievedIpAddress = destIp
 
-                    RetrievedAppsDataManager.put(retrievedApplicationName,
-                        retrievedIpAddress, retrievedAppIcon)
+                    if(!abuseIPDBCheckIP.isFaangIp(destIp)){
+                        RetrievedAppsDataManager.put(retrievedApplicationName,
+                            retrievedIpAddress, retrievedAppIcon)
+                    }
 
 //                    abuseIPDBCheckIP.getIpScore(destIp)
 
